@@ -270,14 +270,18 @@
         }
       },
       {
-        "path": "/top_up_requests/{topUpRequestId}",
+        "path": "/stores/{storeId}/top_up_requests/{topUpRequestId}",
         "definition": {
           "entityName": "TopUpRequest",
           "schema": {
             "$ref": "#/backend/entities/TopUpRequest"
           },
-          "description": "Stores top-up requests from stores. Superadmins can approve or reject requests.",
+          "description": "Stores top-up requests for a specific store. Superadmins can approve or reject requests.",
           "params": [
+            {
+              "name": "storeId",
+              "description": "The ID of the store making the request."
+            },
             {
               "name": "topUpRequestId",
               "description": "The unique identifier for the top-up request."

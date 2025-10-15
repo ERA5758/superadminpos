@@ -36,7 +36,8 @@ export function TopUpRequestsTable({ requests }: { requests: TopUpRequest[] }) {
             return;
         }
 
-        const requestRef = doc(firestore, "top_up_requests", request.id);
+        // The path now needs the storeId to correctly locate the subcollection document
+        const requestRef = doc(firestore, "stores", request.storeId, "topUpRequests", request.id);
         
         updateDocumentNonBlocking(requestRef, { status: action });
         

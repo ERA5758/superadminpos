@@ -3,7 +3,7 @@
 import { useCollection, useMemoFirebase } from '@/firebase';
 import { useFirestore } from '@/firebase';
 import { TopUpRequestsTable } from '@/components/top-up-requests/top-up-requests-table';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collectionGroup, query, orderBy } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { TopUpRequest } from "@/lib/types";
 
@@ -12,7 +12,9 @@ export default function TopUpRequestsPage() {
 
   const topUpRequestsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'top_up_requests'), orderBy('requestDate', 'desc'));
+    // Use a collection group query to get all topUpRequests from all stores.
+    // This requires a Firestore index.
+    return query(collectionGroup(firestore, 'topUpRequests'), orderBy('requestDate', 'desc'));
   }, [firestore]);
 
   const { data: requests, isLoading } = useCollection<TopUpRequest>(topUpRequestsQuery);
