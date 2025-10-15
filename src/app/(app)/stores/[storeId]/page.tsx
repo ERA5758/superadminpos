@@ -8,7 +8,7 @@ import type { Store, UserProfile } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Mail, Phone, MapPin, User, Building, Wallet, CalendarClock, Shield, UserCog, AlertCircle } from 'lucide-react';
+import { Mail, Phone, MapPin, User, Building, Wallet, CalendarClock, Shield, UserCog } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -30,11 +30,10 @@ export default function StoreDetailPage() {
     return doc(firestore, 'users', storeId);
   }, [firestore, storeId]);
 
-  const { data: store, isLoading: isLoadingStore, error: storeError } = useDoc<Store>(storeRef);
-  const { data: user, isLoading: isLoadingUser, error: userError } = useDoc<UserProfile>(userRef);
+  const { data: store, isLoading: isLoadingStore } = useDoc<Store>(storeRef);
+  const { data: user, isLoading: isLoadingUser } = useDoc<UserProfile>(userRef);
 
   const isLoading = isLoadingStore || isLoadingUser;
-  const error = storeError || userError;
 
   const formatNumber = (amount: number | undefined) => {
     if (amount === undefined) return '0';
@@ -73,19 +72,6 @@ export default function StoreDetailPage() {
                 <Skeleton className="h-64 w-full md:col-span-1" />
             </div>
         </div>
-    );
-  }
-
-  if (error) {
-     return (
-      <Alert variant="destructive">
-        <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Gagal Memuat Data</AlertTitle>
-        <AlertDescription>
-          Tidak dapat memuat detail toko atau pengguna. Kemungkinan ada masalah izin akses data.
-          <pre className="mt-2 text-xs bg-black/10 p-2 rounded-md whitespace-pre-wrap">{error.message}</pre>
-        </AlertDescription>
-      </Alert>
     );
   }
 
@@ -161,7 +147,7 @@ export default function StoreDetailPage() {
             <CardContent>
                 {(!user) ? (
                     <div className='text-sm text-muted-foreground py-4 text-center'>
-                      {(isLoadingUser && !userError) ? 'Mencari admin...' : 'Belum ada admin yang ditugaskan.'}
+                      {(isLoadingUser) ? 'Mencari admin...' : 'Belum ada admin yang ditugaskan.'}
                     </div>
                 ) : (
                     <ul className='space-y-3 text-sm pt-2'>
