@@ -8,6 +8,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableCaption,
 } from "@/components/ui/table";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -15,16 +16,37 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle2, XCircle, Hourglass } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useFirestore } from "@/firebase";
+import { doc, updateDoc } from "firebase/firestore";
+import { setDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { format } from 'date-fns';
+import { id } from 'date-fns/locale';
 
 export function TopUpRequestsTable({ requests }: { requests: TopUpRequest[] }) {
     const { toast } = useToast();
+    const firestore = useFirestore();
 
-    const handleAction = (request: TopUpRequest, action: 'approve' | 'reject') => {
+    const handleAction = (request: TopUpRequest, action: 'disetujui' | 'ditolak') => {
+        if (!firestore) {
+            toast({
+                variant: 'destructive',
+                title: "Error",
+                description: "Koneksi ke database gagal.",
+            });
+            return;
+        }
+
+        const requestRef = doc(firestore, "top_up_requests", request.id);
+        
+        updateDocumentNonBlocking(requestRef, { status: action });
+        
+        // Note: Logic for updating store's tokenBalance will be added later
+        // For now, we just update the request status
+
         toast({
-            title: `Permintaan ${action === 'approve' ? 'Disetujui' : 'Ditolak'}`,
-            description: `Permintaan isi ulang untuk ${request.storeName} telah ${action === 'approve' ? 'disetujui' : 'ditolak'}.`,
+            title: `Permintaan ${action === 'disetujui' ? 'Disetujui' : 'Ditolak'}`,
+            description: `Permintaan isi ulang untuk ${request.storeName} telah ${action === 'disetujui' ? 'disetujui' : 'ditolak'}.`,
         });
-        // Here you would typically call a server action to update the request status
     };
     
     const formatCurrency = (amount: number) => {
@@ -36,10 +58,19 @@ export function TopUpRequestsTable({ requests }: { requests: TopUpRequest[] }) {
         }).format(amount);
     };
 
+    const formatDate = (dateString: string | Date) => {
+      try {
+        return format(new Date(dateString), "d MMMM yyyy, HH:mm", { locale: id });
+      } catch (error) {
+        return "Tanggal tidak valid";
+      }
+    };
+
   return (
     <Card>
       <CardContent className="pt-6">
         <Table>
+          {requests.length === 0 && <TableCaption>Belum ada permintaan isi ulang.</TableCaption>}
           <TableHeader>
             <TableRow>
               <TableHead>Nama Toko</TableHead>
@@ -56,7 +87,7 @@ export function TopUpRequestsTable({ requests }: { requests: TopUpRequest[] }) {
                 <TableCell>
                   {formatCurrency(request.amount)}
                 </TableCell>
-                <TableCell>{new Date(request.requestDate).toLocaleDateString('id-ID')}</TableCell>
+                <TableCell>{formatDate(request.requestDate)}</TableCell>
                 <TableCell>
                   <Badge
                     variant={
@@ -78,11 +109,11 @@ export function TopUpRequestsTable({ requests }: { requests: TopUpRequest[] }) {
                 <TableCell className="text-right">
                   {request.status === "tertunda" ? (
                     <div className="flex gap-2 justify-end">
-                      <Button variant="ghost" size="icon" className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-100" onClick={() => handleAction(request, 'approve')}>
+                      <Button variant="ghost" size="icon" className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-100" onClick={() => handleAction(request, 'disetujui')}>
                         <CheckCircle2 className="h-4 w-4" />
                         <span className="sr-only">Setujui</span>
                       </Button>
-                      <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90 hover:bg-destructive/10" onClick={() => handleAction(request, 'reject')}>
+                      <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90 hover:bg-destructive/10" onClick={() => handleAction(request, 'ditolak')}>
                         <XCircle className="h-4 w-4" />
                         <span className="sr-only">Tolak</span>
                       </Button>

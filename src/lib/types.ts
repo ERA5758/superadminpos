@@ -1,3 +1,5 @@
+import { Timestamp } from "firebase/firestore";
+
 export type Store = {
   id: string;
   name: string;
@@ -15,7 +17,7 @@ export type TopUpRequest = {
   storeId: string;
   storeName: string;
   amount: number;
-  requestDate: string;
+  requestDate: string | Date | Timestamp;
   status: 'tertunda' | 'disetujui' | 'ditolak';
 };
 
