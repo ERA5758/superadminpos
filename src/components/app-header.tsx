@@ -25,7 +25,7 @@ export function AppHeader() {
     <header className={cn(
         "sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-sm sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6 sm:py-4"
         )}>
-        {isMobile && <SidebarTrigger asChild><Button variant="ghost" size="icon"><PanelLeft/></Button></SidebarTrigger>}
+        {isMobile && <SidebarTrigger />}
       <h1 className="text-xl sm:text-2xl font-headline font-semibold text-foreground">{title}</h1>
     </header>
   );
