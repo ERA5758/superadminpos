@@ -1,9 +1,10 @@
 'use client';
 
 import type { ReactNode } from "react";
-import { Coins } from "lucide-react";
-import { useAuth, useUser, initiateAnonymousSignIn } from "@/firebase";
+import { Coins, LogOut } from "lucide-react";
+import { useAuth, useUser } from "@/firebase";
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 import {
   SidebarProvider,
@@ -34,12 +35,17 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   const userAvatar = PlaceHolderImages.find(p => p.id === 'user-avatar-1');
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
     if (!isUserLoading && !user) {
-      initiateAnonymousSignIn(auth);
+      router.push('/login');
     }
-  }, [auth, user, isUserLoading]);
+  }, [user, isUserLoading, router]);
+
+  const handleLogout = () => {
+    auth.signOut();
+  };
 
   if (isUserLoading || !user) {
     return (
@@ -89,7 +95,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                     )}
                     <div className="flex flex-col group-data-[collapsible=icon]:hidden">
                         <span className="font-medium text-sm text-sidebar-foreground">Super Admin</span>
-                        <span className="text-xs text-sidebar-foreground/70">{user.email || 'Pengguna Anonim'}</span>
+                        <span className="text-xs text-sidebar-foreground/70">{user.email || 'Pengguna Superadmin'}</span>
                     </div>
                 </Button>
             </DropdownMenuTrigger>
@@ -99,7 +105,10 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               <DropdownMenuItem>Profil</DropdownMenuItem>
               <DropdownMenuItem>Pengaturan</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Keluar</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleLogout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Keluar</span>
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </SidebarFooter>
