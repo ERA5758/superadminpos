@@ -77,7 +77,7 @@ export function StoresTable({ stores }: { stores: Store[] }) {
     };
 
     const handleAdjustBalance = () => {
-        if (!firestore || !selectedStore || adjustmentAmount === 0) {
+        if (!firestore || !selectedStore || adjustmentAmount === 0 || isNaN(adjustmentAmount)) {
             setBalanceDialog(false);
             return;
         };
@@ -298,7 +298,7 @@ export function StoresTable({ stores }: { stores: Store[] }) {
             <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right col-span-1">Saldo Baru</Label>
                 <div className="col-span-3 font-mono text-sm font-bold">
-                    {selectedStore && adjustmentAmount !== null
+                    {selectedStore && !isNaN(adjustmentAmount)
                       ? formatNumber(selectedStore.tokenBalance + adjustmentAmount)
                       : '...'}
                 </div>
@@ -306,7 +306,7 @@ export function StoresTable({ stores }: { stores: Store[] }) {
           </div>
           <DialogFooter>
             <Button type="button" variant="secondary" onClick={() => setBalanceDialog(false)}>Batal</Button>
-            <Button type="submit" onClick={handleAdjustBalance} disabled={adjustmentAmount === 0}>Simpan perubahan</Button>
+            <Button type="submit" onClick={handleAdjustBalance} disabled={adjustmentAmount === 0 || isNaN(adjustmentAmount)}>Simpan perubahan</Button>
           </DialogFooter>
         </DialogContent>
     </Dialog>
