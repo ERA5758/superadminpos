@@ -3,13 +3,19 @@ import { Timestamp } from "firebase/firestore";
 export type Store = {
   id: string;
   name: string;
-  status: 'aktif' | 'tidak aktif';
+  isActive: boolean;
   tokenBalance: number;
-  isPremium: boolean;
-  owner: string;
-  phone: string;
+  premiumCatalogSubscriptionId?: string;
+  ownerName: string;
+  contactPhone: string;
+  contactEmail: string;
   address: string;
-  registrationDate: string;
+  description: string;
+  // Fields below are from static data and might not be in Firestore
+  status?: 'aktif' | 'tidak aktif';
+  isPremium?: boolean;
+  owner?: string;
+  registrationDate?: string;
 };
 
 export type TopUpRequest = {

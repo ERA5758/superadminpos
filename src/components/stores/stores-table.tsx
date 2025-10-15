@@ -90,20 +90,20 @@ export function StoresTable({ stores }: { stores: Store[] }) {
               <TableRow key={store.id}>
                 <TableCell className="font-medium">
                     <div>{store.name}</div>
-                    <div className="text-xs text-muted-foreground">{store.owner}</div>
+                    <div className="text-xs text-muted-foreground">{store.ownerName}</div>
                 </TableCell>
                 <TableCell>
                   {formatCurrency(store.tokenBalance)}
                 </TableCell>
                 <TableCell>
                     <div className="flex items-center">
-                        <Switch id={`premium-${store.id}`} checked={store.isPremium} aria-label="Langganan Premium"/>
-                        <Label htmlFor={`premium-${store.id}`} className="ml-2">{store.isPremium ? 'Ya' : 'Tidak'}</Label>
+                        <Switch id={`premium-${store.id}`} checked={!!store.premiumCatalogSubscriptionId} aria-label="Langganan Premium"/>
+                        <Label htmlFor={`premium-${store.id}`} className="ml-2">{!!store.premiumCatalogSubscriptionId ? 'Ya' : 'Tidak'}</Label>
                     </div>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={store.status === "aktif" ? "default" : "destructive"} className={store.status === "aktif" ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/20 hover:bg-emerald-500/20" : ""}>
-                    {store.status.charAt(0).toUpperCase() + store.status.slice(1)}
+                  <Badge variant={store.isActive ? "default" : "destructive"} className={store.isActive ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/20 hover:bg-emerald-500/20" : ""}>
+                    {store.isActive ? 'Aktif' : 'Tidak Aktif'}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
@@ -121,13 +121,13 @@ export function StoresTable({ stores }: { stores: Store[] }) {
                                 Sesuaikan Saldo Token
                             </DropdownMenuItem>
                             <DropdownMenuItem>
-                                {store.isPremium ? <ToggleLeft className="mr-2 h-4 w-4" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
-                                {store.isPremium ? 'Berhenti Berlangganan Premium' : 'Tingkatkan ke Premium'}
+                                {!!store.premiumCatalogSubscriptionId ? <ToggleLeft className="mr-2 h-4 w-4" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
+                                {!!store.premiumCatalogSubscriptionId ? 'Berhenti Berlangganan Premium' : 'Tingkatkan ke Premium'}
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className={store.status === 'aktif' ? 'text-destructive' : 'text-emerald-600'}>
-                                {store.status === 'aktif' ? <ToggleLeft className="mr-2 h-4 w-4" /> : <ToggleRight className="mr-2 h-4 w-4" />}
-                                {store.status === 'aktif' ? 'Nonaktifkan' : 'Aktifkan'} Toko
+                            <DropdownMenuItem className={store.isActive ? 'text-destructive' : 'text-emerald-600'}>
+                                {store.isActive ? <ToggleLeft className="mr-2 h-4 w-4" /> : <ToggleRight className="mr-2 h-4 w-4" />}
+                                {store.isActive ? 'Nonaktifkan' : 'Aktifkan'} Toko
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
