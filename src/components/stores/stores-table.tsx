@@ -39,7 +39,7 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useFirestore } from "@/firebase";
-import { doc, increment, serverTimestamp, Timestamp } from "firebase/firestore";
+import { doc, increment, Timestamp } from "firebase/firestore";
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -162,14 +162,16 @@ export function StoresTable({ stores }: { stores: Store[] }) {
     
     const isStorePremium = (store: Store): boolean => {
         if (!store.premiumCatalogSubscriptionExpiry) return false;
-        const expiryDate = (store.premiumCatalogSubscriptionExpiry as Timestamp).toDate();
+        // Ensure we can handle Timestamps from Firestore and Date objects
+        const expiryDate = store.premiumCatalogSubscriptionExpiry instanceof Timestamp 
+            ? store.premiumCatalogSubscriptionExpiry.toDate()
+            : new Date(store.premiumCatalogSubscriptionExpiry);
         return expiryDate > new Date();
     }
 
     const formatNumber = (amount: number) => {
       return new Intl.NumberFormat('id-ID').format(amount);
     };
-
 
   return (
     <>
@@ -291,11 +293,15 @@ export function StoresTable({ stores }: { stores: Store[] }) {
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right col-span-1">Saldo Saat Ini</Label>
-                <div className="col-span-3 font-mono text-sm">{formatNumber(selectedStore?.tokenBalance || 0)}</div>
+                <div className="col-span-3 font-mono text-sm">{selectedStore ? formatNumber(selectedStore.tokenBalance) : '...'}</div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right col-span-1">Saldo Baru</Label>
-                <div className="col-span-3 font-mono text-sm font-bold">{formatNumber(((selectedStore?.tokenBalance || 0) + adjustmentAmount))}</div>
+                <div className="col-span-3 font-mono text-sm font-bold">
+                    {selectedStore && adjustmentAmount !== null
+                      ? formatNumber(selectedStore.tokenBalance + adjustmentAmount)
+                      : '...'}
+                </div>
             </div>
           </div>
           <DialogFooter>
@@ -315,7 +321,7 @@ export function StoresTable({ stores }: { stores: Store[] }) {
             </DialogHeader>
              <div className="space-y-2 text-sm">
                 <p>Tanggal kedaluwarsa saat ini: {selectedStore?.premiumCatalogSubscriptionExpiry ? format((selectedStore.premiumCatalogSubscriptionExpiry as Timestamp).toDate(), 'd MMMM yyyy') : 'Tidak ada'}</p>
-                <p>Tanggal kedaluwarsa baru akan menjadi: <strong>{premiumDuration && format(add(selectedStore?.premiumCatalogSubscriptionExpiry?.toDate() || new Date(), { months: premiumDuration }), 'd MMMM yyyy')}</strong></p>
+                <p>Tanggal kedaluwarsa baru akan menjadi: <strong>{premiumDuration && selectedStore ? format(add(isStorePremium(selectedStore) ? (selectedStore.premiumCatalogSubscriptionExpiry as Timestamp).toDate() : new Date(), { months: premiumDuration }), 'd MMMM yyyy') : '...'}</strong></p>
             </div>
             <DialogFooter>
                 <Button variant="secondary" onClick={() => setPremiumDialog(false)}>Batal</Button>
@@ -326,4 +332,4 @@ export function StoresTable({ stores }: { stores: Store[] }) {
     </>
   );
 
-    
+}
