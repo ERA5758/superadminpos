@@ -1,9 +1,9 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useDoc, useCollection, useMemoFirebase } from '@/firebase';
+import { useDoc, useMemoFirebase } from '@/firebase';
 import { useFirestore } from '@/firebase';
-import { doc, Timestamp, query, collection, where } from 'firebase/firestore';
+import { doc, Timestamp } from 'firebase/firestore';
 import type { Store, UserProfile } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,16 +24,17 @@ export default function StoreDetailPage() {
     return doc(firestore, 'stores', storeId);
   }, [firestore, storeId]);
 
-  const usersQuery = useMemoFirebase(() => {
+  const userRef = useMemoFirebase(() => {
     if (!firestore || !storeId) return null;
-    return query(collection(firestore, 'users'), where('storeId', '==', storeId));
+    // Since storeId is the same as userId
+    return doc(firestore, 'users', storeId);
   }, [firestore, storeId]);
 
   const { data: store, isLoading: isLoadingStore, error: storeError } = useDoc<Store>(storeRef);
-  const { data: users, isLoading: isLoadingUsers, error: usersError } = useCollection<UserProfile>(usersQuery);
+  const { data: user, isLoading: isLoadingUser, error: userError } = useDoc<UserProfile>(userRef);
 
-  const isLoading = isLoadingStore || isLoadingUsers;
-  const error = storeError || usersError;
+  const isLoading = isLoadingStore || isLoadingUser;
+  const error = storeError || userError;
 
   const formatNumber = (amount: number | undefined) => {
     if (amount === undefined) return '0';
@@ -48,13 +49,12 @@ export default function StoreDetailPage() {
 
   const getDisplayData = () => {
     if (!store) return null;
-    const owner = users?.[0]; 
     return {
       ...store,
-      ownerName: owner?.name,
-      contactEmail: owner?.email,
-      contactPhone: owner?.whatsapp,
-      adminUids: users?.map(u => u.id) || [],
+      ownerName: user?.name,
+      contactEmail: user?.email,
+      contactPhone: user?.whatsapp,
+      adminUid: user?.id,
     };
   }
 
@@ -82,7 +82,7 @@ export default function StoreDetailPage() {
         <AlertCircle className="h-4 w-4" />
         <AlertTitle>Gagal Memuat Data</AlertTitle>
         <AlertDescription>
-          Tidak dapat memuat detail toko. Kemungkinan ada masalah izin akses data.
+          Tidak dapat memuat detail toko atau pengguna. Kemungkinan ada masalah izin akses data.
           <pre className="mt-2 text-xs bg-black/10 p-2 rounded-md whitespace-pre-wrap">{error.message}</pre>
         </AlertDescription>
       </Alert>
@@ -159,18 +159,16 @@ export default function StoreDetailPage() {
                 <Button variant="outline" size="sm">Kelola Admin</Button>
             </CardHeader>
             <CardContent>
-                {(!users || users.length === 0) ? (
+                {(!user) ? (
                     <div className='text-sm text-muted-foreground py-4 text-center'>
-                      {(isLoadingUsers && !usersError) ? 'Mencari admin...' : 'Belum ada admin yang ditugaskan.'}
+                      {(isLoadingUser && !userError) ? 'Mencari admin...' : 'Belum ada admin yang ditugaskan.'}
                     </div>
                 ) : (
                     <ul className='space-y-3 text-sm pt-2'>
-                        {users.map(user => (
-                            <li key={user.id} className="flex items-center">
-                                <Shield className="mr-3 h-4 w-4 text-muted-foreground" />
-                                <span className='font-mono text-xs'>{user.id}</span>
-                            </li>
-                        ))}
+                        <li key={user.id} className="flex items-center">
+                            <Shield className="mr-3 h-4 w-4 text-muted-foreground" />
+                            <span className='font-mono text-xs'>{user.id}</span>
+                        </li>
                     </ul>
                 )}
             </CardContent>
