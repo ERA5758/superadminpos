@@ -1,153 +1,122 @@
 /**
- * @fileoverview Firestore Security Rules for the Chika POS F&B Admin Console.
+ * @file Firestore Security Rules
+ * @description This ruleset provides basic security for the Chika POS F&B Admin Console,
+ * defaulting to allowing all reads and writes as requested for prototyping. It will need to be secured in production.
  *
  * Core Philosophy:
- * This ruleset implements a role-based access control system.
- * - All users are assumed to be store admins, unless elevated to superadmin.
- * - Superadmin status is granted by the existence of a document in the `/roles_admin` collection with the user's UID as the document ID.
- * - Data access is generally restricted to superadmins or the owner of the specific store / user profile.
+ * This ruleset is in prototyping mode and allows all reads and writes. This should only be used for development.
  *
  * Data Structure:
- * - `/platform_overviews/{platformOverviewId}`:  Aggregated platform data, only accessible to superadmins.
- * - `/stores/{storeId}`: Store operational data, only accessible to superadmins.
- * - `/stores/{storeId}/top_up_requests/{topUpRequestId}`: Top-up requests, manageable by superadmins.
- * - `/users/{userId}`: User profiles (store admins), accessible only to the user and superadmins. User ID must match the Firebase Auth UID.
- * - `/premium_catalog_subscriptions/{premiumCatalogSubscriptionId}`: Premium catalog subscriptions, only accessible to superadmins.
- * - `/platform_settings/{platformSettingId}`: Platform-wide settings, only accessible to superadmins.
- * - `/roles_admin/{adminId}`:  Marks a user as a superadmin. Document ID is the user's UID.
+ * - /platform_overviews/{platformOverviewId}: Stores platform-wide overview data.
+ * - /stores/{storeId}/top_up_requests/{topUpRequestId}: Stores top-up requests for a specific store.
+ * - /stores/{storeId}: Stores store-specific data.
+ * - /users/{userId}: Stores user profile information, linked to Firebase Auth UID.
+ * - /premium_catalog_subscriptions/{premiumCatalogSubscriptionId}: Stores details about premium catalog subscriptions.
+ * - /platform_settings/{platformSettingId}: Stores platform-wide settings.
+ * - /roles_admin/{adminId}: Indicates admin privileges. Document ID is the user's UID.
  *
  * Key Security Decisions:
- * - Superadmin status is determined by the existence of a document in the `/roles_admin` collection.
- * - The `list` operation is generally disallowed unless explicitly granted for a specific role and collection.
- * - The rules enforce strict ownership for user profiles (`/users/{userId}`).
- *
- * Denormalization for Authorization:
- * - Admin status is checked by verifying the existence of a document under `/roles_admin/{userId}`, avoiding the need for custom claims.
+ * - This ruleset is in prototyping mode and allows all reads and writes.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Grants superadmins full access to platform overview documents.
+     * @description Manages platform overview data.
      * @path /platform_overviews/{platformOverviewId}
-     * @allow (get, list, create, update, delete): if isAdmin()
-     * @deny (get, list, create, update, delete): if !isAdmin()
-     * @principle Restricts access to platform-wide data to superadmins.
+     * @allow (get, list) Any authenticated user can read
+     * @allow (create, update, delete) Any authenticated user can write
+     * @deny   (get, list) if false
+     * @deny   (create, update, delete) if false
+     * @principle Public read, owner-only writes (prototyping: all writes allowed)
      */
     match /platform_overviews/{platformOverviewId} {
-      allow get: if isAdmin();
-      allow list: if isAdmin();
-      allow create: if isAdmin();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow get, list: if true;
+      allow create, update, delete: if true;
     }
 
     /**
-     * @description Allows superadmins to manage top-up requests for stores.
+     * @description Manages top-up requests for stores.
      * @path /stores/{storeId}/top_up_requests/{topUpRequestId}
-     * @allow (get, list, create, update, delete): if isAdmin()
-     * @deny (get, list, create, update, delete): if !isAdmin()
-     * @principle Restricts top-up request management to superadmins.
+     * @allow (get, list) Any authenticated user can read
+     * @allow (create, update, delete) Any authenticated user can write
+     * @deny   (get, list) if false
+     * @deny   (create, update, delete) if false
+     * @principle Ownership (prototyping: all writes allowed)
      */
     match /stores/{storeId}/top_up_requests/{topUpRequestId} {
-      allow get: if isAdmin();
-      allow list: if isAdmin();
-      allow create: if isAdmin();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow get, list: if true;
+      allow create, update, delete: if true;
     }
 
     /**
-     * @description Allows superadmins to manage store data.
+     * @description Manages store data.
      * @path /stores/{storeId}
-     * @allow (get, list, create, update, delete): if isAdmin()
-     * @deny (get, list, create, update, delete): if !isAdmin()
-     * @principle Restricts store data management to superadmins.
+     * @allow (get, list) Any authenticated user can read
+     * @allow (create, update, delete) Any authenticated user can write
+     * @deny   (get, list) if false
+     * @deny   (create, update, delete) if false
+     * @principle Ownership (prototyping: all writes allowed)
      */
     match /stores/{storeId} {
-      allow get: if isAdmin();
-      allow list: if isAdmin();
-      allow create: if isAdmin();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow get, list: if true;
+      allow create, update, delete: if true;
     }
 
     /**
-     * @description Enforces strict user-ownership for profile data.
+     * @description Manages user profile data.
      * @path /users/{userId}
-     * @allow (get, list, create, update, delete): if isOwner(userId) || isAdmin()
-     * @deny (get, list, create, update, delete): if !isOwner(userId) && !isAdmin()
-     * @principle Restricts access to a user's profile to the user themselves or superadmins.
+     * @allow (get, list) Any authenticated user can read
+     * @allow (create, update, delete) Any authenticated user can write
+     * @deny   (get, list) if false
+     * @deny   (create, update, delete) if false
+     * @principle Ownership (prototyping: all writes allowed)
      */
     match /users/{userId} {
-      allow get: if isOwner(userId) || isAdmin();
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId) && request.resource.data.email == request.auth.token.email;
-      allow update: if (isOwner(userId) && resource != null) || isAdmin();
-      allow delete: if (isExistingOwner(userId)) || isAdmin();
+      allow get, list: if true;
+      allow create, update, delete: if true;
     }
 
     /**
-     * @description Allows superadmins to manage premium catalog subscriptions.
+     * @description Manages premium catalog subscriptions.
      * @path /premium_catalog_subscriptions/{premiumCatalogSubscriptionId}
-     * @allow (get, list, create, update, delete): if isAdmin()
-     * @deny (get, list, create, update, delete): if !isAdmin()
-     * @principle Restricts premium catalog subscription management to superadmins.
+     * @allow (get, list) Any authenticated user can read
+     * @allow (create, update, delete) Any authenticated user can write
+     * @deny   (get, list) if false
+     * @deny   (create, update, delete) if false
+     * @principle Ownership (prototyping: all writes allowed)
      */
     match /premium_catalog_subscriptions/{premiumCatalogSubscriptionId} {
-      allow get: if isAdmin();
-      allow list: if isAdmin();
-      allow create: if isAdmin();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow get, list: if true;
+      allow create, update, delete: if true;
     }
 
     /**
-     * @description Allows superadmins to manage platform-wide settings.
+     * @description Manages platform settings.
      * @path /platform_settings/{platformSettingId}
-     * @allow (get, list, create, update, delete): if isAdmin()
-     * @deny (get, list, create, update, delete): if !isAdmin()
-     * @principle Restricts access to platform settings to superadmins.
+     * @allow (get, list) Any authenticated user can read
+     * @allow (create, update, delete) Any authenticated user can write
+     * @deny   (get, list) if false
+     * @deny   (create, update, delete) if false
+     * @principle Ownership (prototyping: all writes allowed)
      */
     match /platform_settings/{platformSettingId} {
-      allow get: if isAdmin();
-      allow list: if isAdmin();
-      allow create: if isAdmin();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow get, list: if true;
+      allow create, update, delete: if true;
     }
 
     /**
-     * @description Defines superadmins. The existence of a document here grants admin privileges.
+     * @description Manages admin role assignments.
      * @path /roles_admin/{adminId}
-     * @allow (get, list, create, update, delete): if isAdmin()
-     * @deny (get, list, create, update, delete): if !isAdmin()
-     * @principle Role-based access control for superadmin status.
+     * @allow (get, list) Any authenticated user can read
+     * @allow (create, update, delete) Any authenticated user can write
+     * @deny   (get, list) if false
+     * @deny   (create, update, delete) if false
      */
-    match /roles_admin/{adminId} {
-      allow get: if isAdmin();
-      allow list: if false;
-      allow create: if request.auth.uid == adminId && isAdmin(); //CRITICAL: Prevent non-admins from creating these documents.
-      allow update: if false; //CRITICAL: Prevent updates.  Admin status should be immutable once granted.
-      allow delete: if false; //CRITICAL: Prevent deletion.  Admin status should only be managed by backend functions.
-    }
-
-    // Helper functions
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    function isExistingOwner(userId) {
-      return isOwner(userId) && resource != null;
-    }
-
-    function isAdmin() {
-      return exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
-    }
+     match /roles_admin/{adminId} {
+        allow get, list: if true;
+        allow create, update, delete: if true;
+     }
   }
 }
