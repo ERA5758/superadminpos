@@ -83,7 +83,7 @@ export function StoresTable({ stores }: { stores: Store[] }) {
         };
 
         const storeRef = doc(firestore, "stores", selectedStore.id);
-        const updateData = { tokenBalance: increment(adjustmentAmount) };
+        const updateData = { pradanaTokenBalance: increment(adjustmentAmount) };
 
         updateDocumentNonBlocking(storeRef, updateData);
 
@@ -197,7 +197,7 @@ export function StoresTable({ stores }: { stores: Store[] }) {
                     <div className="text-xs text-muted-foreground">{store.ownerName}</div>
                 </TableCell>
                 <TableCell>
-                  {formatNumber(store.tokenBalance)}
+                  {formatNumber(store.pradanaTokenBalance)}
                 </TableCell>
                 <TableCell>
                     <Badge variant={premium ? 'default' : 'outline'} className={cn(premium && 'bg-amber-500/10 text-amber-700 border-amber-500/20 hover:bg-amber-500/20')}>
@@ -293,13 +293,13 @@ export function StoresTable({ stores }: { stores: Store[] }) {
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right col-span-1">Saldo Saat Ini</Label>
-                <div className="col-span-3 font-mono text-sm">{selectedStore ? formatNumber(selectedStore.tokenBalance) : '...'}</div>
+                <div className="col-span-3 font-mono text-sm">{selectedStore ? formatNumber(selectedStore.pradanaTokenBalance) : '...'}</div>
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right col-span-1">Saldo Baru</Label>
                 <div className="col-span-3 font-mono text-sm font-bold">
                     {selectedStore && !isNaN(adjustmentAmount)
-                      ? formatNumber(selectedStore.tokenBalance + adjustmentAmount)
+                      ? formatNumber(selectedStore.pradanaTokenBalance + adjustmentAmount)
                       : '...'}
                 </div>
             </div>
@@ -333,3 +333,5 @@ export function StoresTable({ stores }: { stores: Store[] }) {
   );
 
 }
+
+    

@@ -96,7 +96,7 @@ export default function StoreDetailPage() {
                 </div>
                 <div className="flex items-center">
                     <Wallet className="mr-3 h-4 w-4 text-muted-foreground" />
-                    <span>Saldo Token: <strong>{formatNumber(store.tokenBalance)}</strong></span>
+                    <span>Saldo Token: <strong>{formatNumber(store.pradanaTokenBalance)}</strong></span>
                 </div>
                 {store.premiumCatalogSubscriptionExpiry && (
                     <div className="flex items-center">
@@ -136,4 +136,5 @@ export default function StoreDetailPage() {
   );
 }
 
+    
     

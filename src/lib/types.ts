@@ -5,7 +5,7 @@ export type Store = {
   id: string;
   name: string;
   isActive: boolean;
-  tokenBalance: number;
+  pradanaTokenBalance: number;
   premiumCatalogSubscriptionExpiry?: Timestamp | Date | string | null;
   ownerName: string;
   contactPhone: string;
@@ -32,4 +32,5 @@ export type Transaction = {
   status: 'Selesai' | 'Tertunda' | 'Gagal';
 };
 
+    
     
