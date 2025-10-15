@@ -1,122 +1,204 @@
 /**
- * @file Firestore Security Rules
- * @description This ruleset provides basic security for the Chika POS F&B Admin Console,
- * defaulting to allowing all reads and writes as requested for prototyping. It will need to be secured in production.
+ * @file Firebase Security Rules for Chika POS F&B Admin Console.
  *
- * Core Philosophy:
- * This ruleset is in prototyping mode and allows all reads and writes. This should only be used for development.
+ * @core_philosophy This ruleset enforces a role-based access control system, with superadmins identified by their presence in the `/roles_admin` collection.
+ * User-specific data is secured under their respective `/users/{userId}` path.
+ * Platform-wide data (settings, overviews, subscriptions) is restricted to superadmins only.
  *
- * Data Structure:
- * - /platform_overviews/{platformOverviewId}: Stores platform-wide overview data.
- * - /stores/{storeId}/top_up_requests/{topUpRequestId}: Stores top-up requests for a specific store.
- * - /stores/{storeId}: Stores store-specific data.
- * - /users/{userId}: Stores user profile information, linked to Firebase Auth UID.
- * - /premium_catalog_subscriptions/{premiumCatalogSubscriptionId}: Stores details about premium catalog subscriptions.
- * - /platform_settings/{platformSettingId}: Stores platform-wide settings.
- * - /roles_admin/{adminId}: Indicates admin privileges. Document ID is the user's UID.
+ * @data_structure
+ * - `/platform_overviews/{platformOverviewId}`: Platform overview data, read/write access for superadmins only.
+ * - `/stores/{storeId}/top_up_requests/{topUpRequestId}`: Top-up requests for stores, read/write access for superadmins.
+ * - `/stores/{storeId}`: Store data, read/write access for superadmins.
+ * - `/users/{userId}`: User profile data, owner-only access (user can only manage their own profile).
+ * - `/premium_catalog_subscriptions/{premiumCatalogSubscriptionId}`: Premium catalog subscription data, read/write access for superadmins.
+ * - `/platform_settings/{platformSettingId}`: Platform settings, read/write access for superadmins only.
+ * - `/roles_admin/{adminId}`: Collection used to define admin roles; the existence of a document for a user grants admin privileges.
  *
- * Key Security Decisions:
- * - This ruleset is in prototyping mode and allows all reads and writes.
+ * @key_security_decisions
+ * - Superadmin status is determined by the presence of a document with their UID in the `/roles_admin` collection.
+ * - User listing is generally disallowed for privacy and security reasons, except where explicitly required and secured (e.g., listing top-up requests, which is restricted to superadmins).
+ *
+ * @denormalization_for_authorization
+ *   - Admin status is checked by verifying the existence of a document in `/roles_admin/{userId}` rather than using custom claims.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Manages platform overview data.
+     * @description Grants superadmins read and write access to platform overview data.
      * @path /platform_overviews/{platformOverviewId}
-     * @allow (get, list) Any authenticated user can read
-     * @allow (create, update, delete) Any authenticated user can write
-     * @deny   (get, list) if false
-     * @deny   (create, update, delete) if false
-     * @principle Public read, owner-only writes (prototyping: all writes allowed)
+     * @allow (get, list) if isAdmin()
+     *   - Request: `get` as a superadmin.
+     *   - Result: Allowed, as superadmins can read platform overviews.
+     * @allow (create, update, delete) if isAdmin()
+     *   - Request: `create` as a superadmin.
+     *   - Result: Allowed, as superadmins can modify platform overviews.
+     * @deny (get, list) if !isAdmin()
+     *   - Request: `get` as a regular user.
+     *   - Result: Denied, as only superadmins can read platform overviews.
+     * @deny (create, update, delete) if !isAdmin()
+     *   - Request: `create` as a regular user.
+     *   - Result: Denied, as only superadmins can modify platform overviews.
+     * @principle Restricts platform overview data access to authorized personnel only.
      */
     match /platform_overviews/{platformOverviewId} {
-      allow get, list: if true;
-      allow create, update, delete: if true;
+      allow get, list: if isAdmin();
+      allow create, update, delete: if isAdmin();
     }
 
     /**
-     * @description Manages top-up requests for stores.
+     * @description Grants superadmins read and write access to store top-up requests.
      * @path /stores/{storeId}/top_up_requests/{topUpRequestId}
-     * @allow (get, list) Any authenticated user can read
-     * @allow (create, update, delete) Any authenticated user can write
-     * @deny   (get, list) if false
-     * @deny   (create, update, delete) if false
-     * @principle Ownership (prototyping: all writes allowed)
+     * @allow (get, list) if isAdmin()
+     *   - Request: `get` as a superadmin.
+     *   - Result: Allowed, as superadmins can read top-up requests.
+     * @allow (create, update, delete) if isAdmin()
+     *   - Request: `create` as a superadmin.
+     *   - Result: Allowed, as superadmins can modify top-up requests.
+     * @deny (get, list) if !isAdmin()
+     *   - Request: `get` as a regular user.
+     *   - Result: Denied, as only superadmins can read top-up requests.
+     * @deny (create, update, delete) if !isAdmin()
+     *   - Request: `create` as a regular user.
+     *   - Result: Denied, as only superadmins can modify top-up requests.
+     * @principle Restricts top-up request management to authorized personnel only.
      */
     match /stores/{storeId}/top_up_requests/{topUpRequestId} {
-      allow get, list: if true;
-      allow create, update, delete: if true;
+      allow get, list: if isAdmin();
+      allow create, update, delete: if isAdmin();
     }
 
     /**
-     * @description Manages store data.
+     * @description Grants superadmins read and write access to store data.
      * @path /stores/{storeId}
-     * @allow (get, list) Any authenticated user can read
-     * @allow (create, update, delete) Any authenticated user can write
-     * @deny   (get, list) if false
-     * @deny   (create, update, delete) if false
-     * @principle Ownership (prototyping: all writes allowed)
+     * @allow (get, list) if isAdmin()
+     *   - Request: `get` as a superadmin.
+     *   - Result: Allowed, as superadmins can read store data.
+     * @allow (create, update, delete) if isAdmin()
+     *   - Request: `create` as a superadmin.
+     *   - Result: Allowed, as superadmins can modify store data.
+     * @deny (get, list) if !isAdmin()
+     *   - Request: `get` as a regular user.
+     *   - Result: Denied, as only superadmins can read store data.
+     * @deny (create, update, delete) if !isAdmin()
+     *   - Request: `create` as a regular user.
+     *   - Result: Denied, as only superadmins can modify store data.
+     * @principle Restricts store data management to authorized personnel only.
      */
     match /stores/{storeId} {
-      allow get, list: if true;
-      allow create, update, delete: if true;
+      allow get, list: if isAdmin();
+      allow create, update, delete: if isAdmin();
     }
 
     /**
-     * @description Manages user profile data.
+     * @description Grants owner-only access to user profile data.
      * @path /users/{userId}
-     * @allow (get, list) Any authenticated user can read
-     * @allow (create, update, delete) Any authenticated user can write
-     * @deny   (get, list) if false
-     * @deny   (create, update, delete) if false
-     * @principle Ownership (prototyping: all writes allowed)
+     * @allow (get, list) if isOwner(userId)
+     *   - Request: `get` as the owner of the user profile.
+     *   - Result: Allowed, as users can read their own profile data.
+     * @allow create if isOwner(userId)
+     *   - Request: `create` as the user with matching UID.
+     *   - Result: Allowed, as users can create their own profile.
+     * @allow update if isExistingOwner(userId)
+     *   - Request: `update` as the owner of the user profile.
+     *   - Result: Allowed, as users can update their own profile data.
+     * @allow delete if isExistingOwner(userId)
+     *   - Request: `delete` as the owner of the user profile.
+     *   - Result: Allowed, as users can delete their own profile data.
+     * @deny create if !isOwner(userId)
+     *   - Request: `create` as a different user.
+     *   - Result: Denied, as users can only create their own profile.
+     * @deny update if !isExistingOwner(userId)
+     *   - Request: `update` as a different user.
+     *   - Result: Denied, as users can only update their own profile.
+     * @deny delete if !isExistingOwner(userId)
+     *   - Request: `delete` as a different user.
+     *   - Result: Denied, as users can only delete their own profile.
+     * @principle Enforces user-ownership for profile data management.
      */
     match /users/{userId} {
-      allow get, list: if true;
-      allow create, update, delete: if true;
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Manages premium catalog subscriptions.
+     * @description Grants superadmins read and write access to premium catalog subscriptions.
      * @path /premium_catalog_subscriptions/{premiumCatalogSubscriptionId}
-     * @allow (get, list) Any authenticated user can read
-     * @allow (create, update, delete) Any authenticated user can write
-     * @deny   (get, list) if false
-     * @deny   (create, update, delete) if false
-     * @principle Ownership (prototyping: all writes allowed)
+     * @allow (get, list) if isAdmin()
+     *   - Request: `get` as a superadmin.
+     *   - Result: Allowed, as superadmins can read premium catalog subscriptions.
+     * @allow (create, update, delete) if isAdmin()
+     *   - Request: `create` as a superadmin.
+     *   - Result: Allowed, as superadmins can modify premium catalog subscriptions.
+     * @deny (get, list) if !isAdmin()
+     *   - Request: `get` as a regular user.
+     *   - Result: Denied, as only superadmins can read premium catalog subscriptions.
+     * @deny (create, update, delete) if !isAdmin()
+     *   - Request: `create` as a regular user.
+     *   - Result: Denied, as only superadmins can modify premium catalog subscriptions.
+     * @principle Restricts subscription management to authorized personnel only.
      */
     match /premium_catalog_subscriptions/{premiumCatalogSubscriptionId} {
-      allow get, list: if true;
-      allow create, update, delete: if true;
+      allow get, list: if isAdmin();
+      allow create, update, delete: if isAdmin();
     }
 
     /**
-     * @description Manages platform settings.
+     * @description Grants superadmins read and write access to platform settings.
      * @path /platform_settings/{platformSettingId}
-     * @allow (get, list) Any authenticated user can read
-     * @allow (create, update, delete) Any authenticated user can write
-     * @deny   (get, list) if false
-     * @deny   (create, update, delete) if false
-     * @principle Ownership (prototyping: all writes allowed)
+     * @allow (get, list) if isAdmin()
+     *   - Request: `get` as a superadmin.
+     *   - Result: Allowed, as superadmins can read platform settings.
+     * @allow (create, update, delete) if isAdmin()
+     *   - Request: `create` as a superadmin.
+     *   - Result: Allowed, as superadmins can modify platform settings.
+     * @deny (get, list) if !isAdmin()
+     *   - Request: `get` as a regular user.
+     *   - Result: Denied, as only superadmins can read platform settings.
+     * @deny (create, update, delete) if !isAdmin()
+     *   - Request: `create` as a regular user.
+     *   - Result: Denied, as only superadmins can modify platform settings.
+     * @principle Restricts platform settings management to authorized personnel only.
      */
     match /platform_settings/{platformSettingId} {
-      allow get, list: if true;
-      allow create, update, delete: if true;
+      allow get, list: if isAdmin();
+      allow create, update, delete: if isAdmin();
     }
 
     /**
-     * @description Manages admin role assignments.
+     * @description Grants read access to admin role documents to allow role checks. Write access is denied.
      * @path /roles_admin/{adminId}
-     * @allow (get, list) Any authenticated user can read
-     * @allow (create, update, delete) Any authenticated user can write
-     * @deny   (get, list) if false
-     * @deny   (create, update, delete) if false
+     * @allow get, list: if true;
+     *   - Request: `get` as any user.
+     *   - Result: Allowed, as the existence of the document determines admin status.
+     * @deny create, update, delete: if true;
+     *   - Request: `create` as any user.
+     *   - Result: Denied, as only backend processes can manage admin roles.
+     * @principle Defines admin roles and restricts modification to backend processes.
      */
-     match /roles_admin/{adminId} {
-        allow get, list: if true;
-        allow create, update, delete: if true;
-     }
+    match /roles_admin/{adminId} {
+      allow get, list: if true;
+      allow create, update, delete: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    function isAdmin() {
+      return exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+    }
   }
 }
