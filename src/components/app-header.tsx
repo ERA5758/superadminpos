@@ -9,11 +9,11 @@ import { PanelLeft } from 'lucide-react';
 
 const getPageTitle = (pathname: string) => {
   const normalizedPath = pathname.toLowerCase();
-  if (normalizedPath.startsWith('/dashboard')) return 'Gambaran Platform';
-  if (normalizedPath.startsWith('/top-up-requests')) return 'Manajemen Permintaan Isi Ulang';
-  if (normalizedPath.startsWith('/stores')) return 'Manajemen Toko (Penyewa)';
-  if (normalizedPath.startsWith('/settings')) return 'Pengaturan Platform Global';
-  return 'Admin Chika POS';
+  if (normalizedPath.startsWith('/dashboard')) return 'Dashboard Platform';
+  if (normalizedPath.startsWith('/top-up-requests')) return 'Manajemen Verifikasi Top-Up';
+  if (normalizedPath.startsWith('/stores')) return 'Manajemen Toko (Tenant)';
+  if (normalizedPath.startsWith('/settings')) return 'Pengaturan Global Platform';
+  return 'Konsol Admin Chika';
 };
 
 export function AppHeader() {

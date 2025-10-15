@@ -10,9 +10,9 @@ import {
 } from "@/components/ui/sidebar";
 
 const navItems = [
-  { href: "/dashboard", icon: <LayoutDashboard />, label: "Dasbor" },
-  { href: "/top-up-requests", icon: <Coins />, label: "Permintaan Isi Ulang" },
-  { href: "/stores", icon: <StoreIcon />, label: "Toko" },
+  { href: "/dashboard", icon: <LayoutDashboard />, label: "Dashboard" },
+  { href: "/top-up-requests", icon: <Coins />, label: "Verifikasi Top-Up" },
+  { href: "/stores", icon: <StoreIcon />, label: "Manajemen Toko" },
   { href: "/settings", icon: <Settings />, label: "Pengaturan" },
 ];
 
