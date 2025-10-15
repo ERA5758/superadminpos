@@ -30,35 +30,83 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
   } from "@/components/ui/dialog"
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { useFirestore } from "@/firebase";
+import { doc, increment, serverTimestamp } from "firebase/firestore";
+import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { useRouter } from "next/navigation";
 
 export function StoresTable({ stores }: { stores: Store[] }) {
+    const router = useRouter();
+    const firestore = useFirestore();
+    const { toast } = useToast();
+
     const [openDialog, setOpenDialog] = useState(false);
     const [selectedStore, setSelectedStore] = useState<Store | null>(null);
     const [adjustmentAmount, setAdjustmentAmount] = useState(0);
-    const { toast } = useToast();
+
+    const handleRowClick = (storeId: string) => {
+        router.push(`/stores/${storeId}`);
+    };
+    
+    const handleActionClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+    }
 
     const handleOpenDialog = (store: Store) => {
         setSelectedStore(store);
+        setAdjustmentAmount(0);
         setOpenDialog(true);
     }
 
     const handleAdjustBalance = () => {
-        if (!selectedStore) return;
+        if (!firestore || !selectedStore || adjustmentAmount === 0) {
+            setOpenDialog(false);
+            return;
+        };
+
+        const storeRef = doc(firestore, "stores", selectedStore.id);
+        updateDocumentNonBlocking(storeRef, { 
+            tokenBalance: increment(adjustmentAmount)
+        });
 
         toast({
             title: "Saldo Disesuaikan",
-            description: `Berhasil menyesuaikan saldo ${selectedStore.name} sebesar ${adjustmentAmount}.`,
+            description: `Berhasil mengajukan penyesuaian saldo untuk ${selectedStore.name} sebesar ${formatNumber(adjustmentAmount)}.`,
         });
 
-        // Here you would call a server action to update the balance
         setOpenDialog(false);
-        setAdjustmentAmount(0);
         setSelectedStore(null);
+    }
+
+    const handleToggleActive = (store: Store) => {
+        if (!firestore) return;
+        const storeRef = doc(firestore, "stores", store.id);
+        const newStatus = !store.isActive;
+        updateDocumentNonBlocking(storeRef, { isActive: newStatus });
+        toast({
+            title: `Toko ${newStatus ? 'Diaktifkan' : 'Dinonaktifkan'}`,
+            description: `${store.name} telah berhasil ${newStatus ? 'diaktifkan' : 'dinonaktifkan'}.`,
+        });
+    }
+
+    const handleTogglePremium = (store: Store) => {
+        if (!firestore) return;
+        const storeRef = doc(firestore, "stores", store.id);
+        const isCurrentlyPremium = !!store.premiumCatalogSubscriptionId;
+        const newPremiumStatus = !isCurrentlyPremium;
+
+        updateDocumentNonBlocking(storeRef, { 
+            premiumCatalogSubscriptionId: newPremiumStatus ? 'sub_premium_placeholder' : null
+        });
+
+        toast({
+            title: `Langganan Premium Diperbarui`,
+            description: `${store.name} sekarang ${newPremiumStatus ? 'menjadi' : 'berhenti menjadi'} pelanggan premium.`,
+        });
     }
 
     const formatNumber = (amount: number) => {
@@ -82,7 +130,7 @@ export function StoresTable({ stores }: { stores: Store[] }) {
           </TableHeader>
           <TableBody>
             {stores.map((store) => (
-              <TableRow key={store.id}>
+              <TableRow key={store.id} onClick={() => handleRowClick(store.id)} className="cursor-pointer">
                 <TableCell className="font-medium">
                     <div>{store.name}</div>
                     <div className="text-xs text-muted-foreground">{store.ownerName}</div>
@@ -90,18 +138,16 @@ export function StoresTable({ stores }: { stores: Store[] }) {
                 <TableCell>
                   {formatNumber(store.tokenBalance)}
                 </TableCell>
-                <TableCell>
+                <TableCell onClick={handleActionClick}>
                     <div className="flex items-center">
-                        <Switch id={`premium-${store.id}`} checked={!!store.premiumCatalogSubscriptionId} aria-label="Langganan Premium"/>
-                        <Label htmlFor={`premium-${store.id}`} className="ml-2">{!!store.premiumCatalogSubscriptionId ? 'Ya' : 'Tidak'}</Label>
+                        <Switch id={`premium-${store.id}`} checked={!!store.premiumCatalogSubscriptionId} onCheckedChange={() => handleTogglePremium(store)} aria-label="Langganan Premium"/>
+                        <Label htmlFor={`premium-${store.id}`} className="ml-2 sr-only">{!!store.premiumCatalogSubscriptionId ? 'Ya' : 'Tidak'}</Label>
                     </div>
                 </TableCell>
-                <TableCell>
-                  <Badge variant={store.isActive ? "default" : "destructive"} className={store.isActive ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/20 hover:bg-emerald-500/20" : ""}>
-                    {store.isActive ? 'Aktif' : 'Tidak Aktif'}
-                  </Badge>
+                <TableCell onClick={handleActionClick}>
+                    <Switch id={`active-${store.id}`} checked={store.isActive} onCheckedChange={() => handleToggleActive(store)} aria-label="Status Aktif"/>
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell className="text-right" onClick={handleActionClick}>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                         <Button variant="ghost" className="h-8 w-8 p-0">
@@ -110,17 +156,17 @@ export function StoresTable({ stores }: { stores: Store[] }) {
                         </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Aksi</DropdownMenuLabel>
+                            <DropdownMenuLabel>Aksi Cepat</DropdownMenuLabel>
                             <DropdownMenuItem onClick={() => handleOpenDialog(store)}>
                                 <Pencil className="mr-2 h-4 w-4" />
                                 Sesuaikan Saldo Token
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleTogglePremium(store)}>
                                 {!!store.premiumCatalogSubscriptionId ? <ToggleLeft className="mr-2 h-4 w-4" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
-                                {!!store.premiumCatalogSubscriptionId ? 'Berhenti Berlangganan Premium' : 'Tingkatkan ke Premium'}
+                                {!!store.premiumCatalogSubscriptionId ? 'Hentikan Premium' : 'Jadikan Premium'}
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className={store.isActive ? 'text-destructive' : 'text-emerald-600'}>
+                            <DropdownMenuItem onClick={() => handleToggleActive(store)} className={store.isActive ? 'text-destructive' : 'text-emerald-600'}>
                                 {store.isActive ? <ToggleLeft className="mr-2 h-4 w-4" /> : <ToggleRight className="mr-2 h-4 w-4" />}
                                 {store.isActive ? 'Nonaktifkan' : 'Aktifkan'} Toko
                             </DropdownMenuItem>
@@ -139,7 +185,7 @@ export function StoresTable({ stores }: { stores: Store[] }) {
           <DialogHeader>
             <DialogTitle className="font-headline">Sesuaikan Saldo Token</DialogTitle>
             <DialogDescription>
-              Sesuaikan saldo token secara manual untuk {selectedStore?.name}. Masukkan nilai positif untuk menambah, atau nilai negatif untuk mengurangi.
+              Sesuaikan saldo token untuk {selectedStore?.name}. Masukkan nilai positif untuk menambah, atau nilai negatif untuk mengurangi.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -151,14 +197,23 @@ export function StoresTable({ stores }: { stores: Store[] }) {
                 id="amount"
                 type="number"
                 value={adjustmentAmount}
-                onChange={(e) => setAdjustmentAmount(parseFloat(e.target.value))}
+                onChange={(e) => setAdjustmentAmount(parseInt(e.target.value, 10) || 0)}
                 className="col-span-3"
+                placeholder="cth: 50000 atau -10000"
               />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right col-span-1">Saldo Saat Ini</Label>
+                <div className="col-span-3 font-mono text-sm">{formatNumber(selectedStore?.tokenBalance || 0)}</div>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right col-span-1">Saldo Baru</Label>
+                <div className="col-span-3 font-mono text-sm font-bold">{formatNumber((selectedStore?.tokenBalance || 0) + adjustmentAmount)}</div>
             </div>
           </div>
           <DialogFooter>
             <Button type="button" variant="secondary" onClick={() => setOpenDialog(false)}>Batal</Button>
-            <Button type="submit" onClick={handleAdjustBalance}>Simpan perubahan</Button>
+            <Button type="submit" onClick={handleAdjustBalance} disabled={adjustmentAmount === 0}>Simpan perubahan</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
