@@ -1,7 +1,7 @@
 export type Store = {
   id: string;
   name: string;
-  status: 'active' | 'inactive';
+  status: 'aktif' | 'tidak aktif';
   tokenBalance: number;
   isPremium: boolean;
   owner: string;
@@ -16,7 +16,7 @@ export type TopUpRequest = {
   storeName: string;
   amount: number;
   requestDate: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'tertunda' | 'disetujui' | 'ditolak';
 };
 
 export type Transaction = {
@@ -24,6 +24,6 @@ export type Transaction = {
   storeName: string;
   amount: number;
   date: string;
-  type: 'Top-up' | 'Fee' | 'Sale';
-  status: 'Completed' | 'Pending' | 'Failed';
+  type: 'Isi Ulang' | 'Biaya' | 'Penjualan';
+  status: 'Selesai' | 'Tertunda' | 'Gagal';
 };

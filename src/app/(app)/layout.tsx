@@ -38,7 +38,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                     </div>
                     <div className="flex flex-col items-start group-data-[collapsible=icon]:hidden">
                         <h1 className="text-lg font-headline font-bold text-sidebar-foreground">Chika POS</h1>
-                        <p className="text-xs text-sidebar-foreground/70">Admin Console</p>
+                        <p className="text-xs text-sidebar-foreground/70">Konsol Admin</p>
                     </div>
                 </Link>
             </Button>
@@ -63,12 +63,12 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent side="right" align="start" className="w-56">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuLabel>Akun Saya</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Profile</DropdownMenuItem>
-              <DropdownMenuItem>Settings</DropdownMenuItem>
+              <DropdownMenuItem>Profil</DropdownMenuItem>
+              <DropdownMenuItem>Pengaturan</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Log out</DropdownMenuItem>
+              <DropdownMenuItem>Keluar</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </SidebarFooter>

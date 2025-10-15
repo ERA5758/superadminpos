@@ -10,10 +10,10 @@ import {
 } from "@/components/ui/sidebar";
 
 const navItems = [
-  { href: "/dashboard", icon: <LayoutDashboard />, label: "Dashboard" },
-  { href: "/top-up-requests", icon: <Coins />, label: "Top-Up Requests" },
-  { href: "/stores", icon: <StoreIcon />, label: "Stores" },
-  { href: "/settings", icon: <Settings />, label: "Settings" },
+  { href: "/dashboard", icon: <LayoutDashboard />, label: "Dasbor" },
+  { href: "/top-up-requests", icon: <Coins />, label: "Permintaan Isi Ulang" },
+  { href: "/stores", icon: <StoreIcon />, label: "Toko" },
+  { href: "/settings", icon: <Settings />, label: "Pengaturan" },
 ];
 
 export function SidebarNav() {

@@ -16,15 +16,15 @@ export default function SettingsPage() {
     <div className="grid gap-6">
       <Card>
         <CardHeader>
-          <CardTitle className="font-headline">Platform Fees</CardTitle>
+          <CardTitle className="font-headline">Biaya Platform</CardTitle>
           <CardDescription>
-            Manage transaction fees for the platform.
+            Kelola biaya transaksi untuk platform.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="transaction-fee">Transaction Fee (%)</Label>
+              <Label htmlFor="transaction-fee">Biaya Transaksi (%)</Label>
               <Input
                 id="transaction-fee"
                 type="number"
@@ -33,69 +33,69 @@ export default function SettingsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="withdrawal-fee">Withdrawal Fee (Fixed)</Label>
+              <Label htmlFor="withdrawal-fee">Biaya Penarikan (Tetap)</Label>
               <Input id="withdrawal-fee" type="number" defaultValue="1.00" />
             </div>
           </form>
         </CardContent>
         <CardFooter className="border-t px-6 py-4">
-          <Button>Save</Button>
+          <Button>Simpan</Button>
         </CardFooter>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle className="font-headline">Bank Account Information</CardTitle>
+          <CardTitle className="font-headline">Informasi Rekening Bank</CardTitle>
           <CardDescription>
-            This account will be used for store top-ups.
+            Akun ini akan digunakan untuk isi ulang saldo toko.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="bank-name">Bank Name</Label>
+              <Label htmlFor="bank-name">Nama Bank</Label>
               <Input id="bank-name" defaultValue="Global Bank Inc." />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="account-holder">Account Holder Name</Label>
+              <Label htmlFor="account-holder">Nama Pemegang Rekening</Label>
               <Input id="account-holder" defaultValue="Chika POS Global" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="account-number">Account Number</Label>
+              <Label htmlFor="account-number">Nomor Rekening</Label>
               <Input id="account-number" defaultValue="123-456-7890" />
             </div>
           </form>
         </CardContent>
         <CardFooter className="border-t px-6 py-4">
-          <Button>Save</Button>
+          <Button>Simpan</Button>
         </CardFooter>
       </Card>
       
       <Card>
         <CardHeader>
-          <CardTitle className="font-headline">Promotions</CardTitle>
+          <CardTitle className="font-headline">Promosi</CardTitle>
           <CardDescription>
-            Manage promotional content on the login page.
+            Kelola konten promosi di halaman login.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="promo-title">Promotion Title</Label>
-              <Input id="promo-title" defaultValue="Special Offer!" />
+              <Label htmlFor="promo-title">Judul Promosi</Label>
+              <Input id="promo-title" defaultValue="Penawaran Spesial!" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="promo-description">Description</Label>
-              <Input id="promo-description" defaultValue="Get 50% off on your first transaction fee." />
+              <Label htmlFor="promo-description">Deskripsi</Label>
+              <Input id="promo-description" defaultValue="Dapatkan diskon 50% untuk biaya transaksi pertamamu." />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="promo-image-url">Image URL</Label>
+              <Label htmlFor="promo-image-url">URL Gambar</Label>
               <Input id="promo-image-url" defaultValue="https://example.com/promo.png" />
             </div>
           </form>
         </CardContent>
         <CardFooter className="border-t px-6 py-4">
-          <Button>Save</Button>
+          <Button>Simpan</Button>
         </CardFooter>
       </Card>
     </div>

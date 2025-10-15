@@ -8,8 +8,8 @@ export function RevenueChart() {
   return (
     <Card className="col-span-1 lg:col-span-2">
       <CardHeader>
-        <CardTitle className="font-headline">Revenue</CardTitle>
-        <CardDescription>Monthly revenue overview for the last year</CardDescription>
+        <CardTitle className="font-headline">Pendapatan</CardTitle>
+        <CardDescription>Gambaran pendapatan bulanan selama setahun terakhir</CardDescription>
       </CardHeader>
       <CardContent className="pl-2">
         <ResponsiveContainer width="100%" height={350}>
@@ -27,7 +27,7 @@ export function RevenueChart() {
               fontSize={12} 
               tickLine={false} 
               axisLine={false} 
-              tickFormatter={(value) => `$${new Intl.NumberFormat('en-US').format(value as number)}`}
+              tickFormatter={(value) => `Rp${new Intl.NumberFormat('id-ID').format(value as number)}`}
             />
             <Tooltip
               cursor={{ fill: 'hsl(var(--muted))' }}
@@ -37,7 +37,7 @@ export function RevenueChart() {
                 borderRadius: 'var(--radius)',
               }}
               labelClassName="font-bold"
-              formatter={(value) => [`$${new Intl.NumberFormat('en-US').format(value as number)}`, 'Revenue']}
+              formatter={(value) => [`Rp${new Intl.NumberFormat('id-ID').format(value as number)}`, 'Pendapatan']}
             />
             <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
           </BarChart>

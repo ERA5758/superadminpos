@@ -8,8 +8,8 @@ export function StoresGrowthChart() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-headline">Store Growth</CardTitle>
-        <CardDescription>Total registered stores over the last year</CardDescription>
+        <CardTitle className="font-headline">Pertumbuhan Toko</CardTitle>
+        <CardDescription>Total toko terdaftar selama setahun terakhir</CardDescription>
       </CardHeader>
       <CardContent className="pl-2">
         <ResponsiveContainer width="100%" height={350}>
@@ -37,7 +37,7 @@ export function StoresGrowthChart() {
                 borderRadius: 'var(--radius)',
               }}
               labelClassName="font-bold"
-              formatter={(value) => [value, 'New Stores']}
+              formatter={(value) => [value, 'Toko Baru']}
             />
             <Line type="monotone" dataKey="count" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 4, fill: 'hsl(var(--primary))' }} activeDot={{ r: 8 }} />
           </LineChart>

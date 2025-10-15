@@ -7,9 +7,11 @@ import { RecentTransactions } from '@/components/dashboard/recent-transactions';
 
 export default function DashboardPage() {
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('id-ID', {
       style: 'currency',
-      currency: 'USD',
+      currency: 'IDR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
     }).format(amount);
   };
 
@@ -17,28 +19,28 @@ export default function DashboardPage() {
     <div className="flex flex-col gap-6">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          title="Total Token Balance"
+          title="Saldo Token Total"
           value={formatCurrency(dashboardStats.totalTokenBalance)}
           icon={Landmark}
-          description="Total tokens across all stores"
+          description="Total token di semua toko"
         />
         <StatCard
-          title="Total Stores"
+          title="Total Toko"
           value={dashboardStats.totalStores.toString()}
           icon={Store}
-          description="+11 since last month"
+          description="+11 sejak bulan lalu"
         />
         <StatCard
-          title="Total Transactions"
-          value={new Intl.NumberFormat('en-US').format(dashboardStats.totalTransactions)}
+          title="Total Transaksi"
+          value={new Intl.NumberFormat('id-ID').format(dashboardStats.totalTransactions)}
           icon={Users}
-          description="In the last 30 days"
+          description="Dalam 30 hari terakhir"
         />
         <StatCard
-          title="Total Revenue"
+          title="Total Pendapatan"
           value={formatCurrency(dashboardStats.totalRevenue)}
           icon={Banknote}
-          description="+15.2% from last month"
+          description="+15.2% dari bulan lalu"
         />
       </div>
       <div className="grid gap-6 lg:grid-cols-3">

@@ -51,8 +51,8 @@ export function StoresTable({ stores }: { stores: Store[] }) {
         if (!selectedStore) return;
 
         toast({
-            title: "Balance Adjusted",
-            description: `Successfully adjusted ${selectedStore.name}'s balance by ${adjustmentAmount}.`,
+            title: "Saldo Disesuaikan",
+            description: `Berhasil menyesuaikan saldo ${selectedStore.name} sebesar ${adjustmentAmount}.`,
         });
 
         // Here you would call a server action to update the balance
@@ -60,6 +60,15 @@ export function StoresTable({ stores }: { stores: Store[] }) {
         setAdjustmentAmount(0);
         setSelectedStore(null);
     }
+
+    const formatCurrency = (amount: number) => {
+      return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(amount);
+    };
 
 
   return (
@@ -69,11 +78,11 @@ export function StoresTable({ stores }: { stores: Store[] }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Store Name</TableHead>
-              <TableHead>Token Balance</TableHead>
+              <TableHead>Nama Toko</TableHead>
+              <TableHead>Saldo Token</TableHead>
               <TableHead>Premium</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
+              <TableHead className="text-right">Aksi</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -84,19 +93,16 @@ export function StoresTable({ stores }: { stores: Store[] }) {
                     <div className="text-xs text-muted-foreground">{store.owner}</div>
                 </TableCell>
                 <TableCell>
-                  {new Intl.NumberFormat("en-US", {
-                    style: "currency",
-                    currency: "USD",
-                  }).format(store.tokenBalance)}
+                  {formatCurrency(store.tokenBalance)}
                 </TableCell>
                 <TableCell>
                     <div className="flex items-center">
-                        <Switch id={`premium-${store.id}`} checked={store.isPremium} aria-label="Premium Subscription"/>
-                        <Label htmlFor={`premium-${store.id}`} className="ml-2">{store.isPremium ? 'Yes' : 'No'}</Label>
+                        <Switch id={`premium-${store.id}`} checked={store.isPremium} aria-label="Langganan Premium"/>
+                        <Label htmlFor={`premium-${store.id}`} className="ml-2">{store.isPremium ? 'Ya' : 'Tidak'}</Label>
                     </div>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={store.status === "active" ? "default" : "destructive"} className={store.status === "active" ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/20 hover:bg-emerald-500/20" : ""}>
+                  <Badge variant={store.status === "aktif" ? "default" : "destructive"} className={store.status === "aktif" ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/20 hover:bg-emerald-500/20" : ""}>
                     {store.status.charAt(0).toUpperCase() + store.status.slice(1)}
                   </Badge>
                 </TableCell>
@@ -104,24 +110,24 @@ export function StoresTable({ stores }: { stores: Store[] }) {
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                         <Button variant="ghost" className="h-8 w-8 p-0">
-                            <span className="sr-only">Open menu</span>
+                            <span className="sr-only">Buka menu</span>
                             <MoreHorizontal className="h-4 w-4" />
                         </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuLabel>Aksi</DropdownMenuLabel>
                             <DropdownMenuItem onClick={() => handleOpenDialog(store)}>
                                 <Pencil className="mr-2 h-4 w-4" />
-                                Adjust Token Balance
+                                Sesuaikan Saldo Token
                             </DropdownMenuItem>
                             <DropdownMenuItem>
                                 {store.isPremium ? <ToggleLeft className="mr-2 h-4 w-4" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
-                                {store.isPremium ? 'Unsubscribe Premium' : 'Upgrade to Premium'}
+                                {store.isPremium ? 'Berhenti Berlangganan Premium' : 'Tingkatkan ke Premium'}
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className={store.status === 'active' ? 'text-destructive' : 'text-emerald-600'}>
-                                {store.status === 'active' ? <ToggleLeft className="mr-2 h-4 w-4" /> : <ToggleRight className="mr-2 h-4 w-4" />}
-                                {store.status === 'active' ? 'Deactivate' : 'Activate'} Store
+                            <DropdownMenuItem className={store.status === 'aktif' ? 'text-destructive' : 'text-emerald-600'}>
+                                {store.status === 'aktif' ? <ToggleLeft className="mr-2 h-4 w-4" /> : <ToggleRight className="mr-2 h-4 w-4" />}
+                                {store.status === 'aktif' ? 'Nonaktifkan' : 'Aktifkan'} Toko
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
@@ -136,15 +142,15 @@ export function StoresTable({ stores }: { stores: Store[] }) {
     <Dialog open={openDialog} onOpenChange={setOpenDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle className="font-headline">Adjust Token Balance</DialogTitle>
+            <DialogTitle className="font-headline">Sesuaikan Saldo Token</DialogTitle>
             <DialogDescription>
-              Manually adjust the token balance for {selectedStore?.name}. Enter a positive value to add, or a negative value to subtract.
+              Sesuaikan saldo token secara manual untuk {selectedStore?.name}. Masukkan nilai positif untuk menambah, atau nilai negatif untuk mengurangi.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="amount" className="text-right">
-                Amount
+                Jumlah
               </Label>
               <Input
                 id="amount"
@@ -156,8 +162,8 @@ export function StoresTable({ stores }: { stores: Store[] }) {
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="secondary" onClick={() => setOpenDialog(false)}>Cancel</Button>
-            <Button type="submit" onClick={handleAdjustBalance}>Save changes</Button>
+            <Button type="button" variant="secondary" onClick={() => setOpenDialog(false)}>Batal</Button>
+            <Button type="submit" onClick={handleAdjustBalance}>Simpan perubahan</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
