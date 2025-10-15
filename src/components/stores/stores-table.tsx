@@ -41,12 +41,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useFirestore } from "@/firebase";
 import { doc, increment, Timestamp } from "firebase/firestore";
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
-import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { add, format } from "date-fns";
 
 export function StoresTable({ stores }: { stores: Store[] }) {
-    const router = useRouter();
     const firestore = useFirestore();
     const { toast } = useToast();
 
@@ -56,10 +54,6 @@ export function StoresTable({ stores }: { stores: Store[] }) {
     const [adjustmentAmount, setAdjustmentAmount] = useState(0);
     const [premiumDuration, setPremiumDuration] = useState<number | null>(null);
 
-    const handleRowClick = (storeId: string) => {
-        router.push(`/stores/${storeId}`);
-    };
-    
     const handleActionClick = (e: React.MouseEvent) => {
         e.stopPropagation();
     }
@@ -191,7 +185,7 @@ export function StoresTable({ stores }: { stores: Store[] }) {
             {stores.map((store) => {
               const premium = isStorePremium(store);
               return (
-              <TableRow key={store.id} onClick={() => handleRowClick(store.id)} className="cursor-pointer">
+              <TableRow key={store.id} className="cursor-default">
                 <TableCell className="font-medium">
                     <div>{store.name}</div>
                     <div className="text-xs text-muted-foreground">{store.ownerName}</div>
