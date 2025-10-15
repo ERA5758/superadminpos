@@ -6,21 +6,23 @@ export type Store = {
   isActive: boolean;
   pradanaTokenBalance: number;
   premiumCatalogSubscriptionExpiry?: Timestamp | Date | string | null;
-  adminUids?: string[];
-  // Merged properties from StoreProfile for convenience
+  // These fields will now be populated from the UserProfile
   ownerName?: string;
-  contactPhone?: string;
   contactEmail?: string;
-  address?: string;
-  description?: string;
+  contactPhone?: string;
+  address?: string; // Note: address is not in the new UserProfile, might need to adjust later
+  description?: string; // Note: description is not in the new UserProfile, might need to adjust later
+  adminUids?: string[];
 };
 
-export type StoreProfile = {
-  ownerName: string;
-  contactPhone: string;
-  contactEmail: string;
-  address: string;
-  description: string;
+export type UserProfile = {
+  id: string; // Document ID is the user's UID
+  email: string;
+  name: string;
+  role: string;
+  status: string;
+  storeId: string;
+  whatsapp: string;
 }
 
 export type TopUpRequest = {
@@ -40,5 +42,3 @@ export type Transaction = {
   type: 'Isi Ulang' | 'Biaya' | 'Penjualan';
   status: 'Selesai' | 'Tertunda' | 'Gagal';
 };
-
-    
