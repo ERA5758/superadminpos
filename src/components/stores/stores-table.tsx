@@ -61,13 +61,8 @@ export function StoresTable({ stores }: { stores: Store[] }) {
         setSelectedStore(null);
     }
 
-    const formatCurrency = (amount: number) => {
-      return new Intl.NumberFormat('id-ID', {
-        style: 'currency',
-        currency: 'IDR',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(amount);
+    const formatNumber = (amount: number) => {
+      return new Intl.NumberFormat('id-ID').format(amount);
     };
 
 
@@ -93,7 +88,7 @@ export function StoresTable({ stores }: { stores: Store[] }) {
                     <div className="text-xs text-muted-foreground">{store.ownerName}</div>
                 </TableCell>
                 <TableCell>
-                  {formatCurrency(store.tokenBalance)}
+                  {formatNumber(store.tokenBalance)}
                 </TableCell>
                 <TableCell>
                     <div className="flex items-center">

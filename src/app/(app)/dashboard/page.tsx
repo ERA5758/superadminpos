@@ -20,6 +20,10 @@ export default function DashboardPage() {
     }).format(amount);
   };
 
+  const formatNumber = (amount: number) => {
+    return new Intl.NumberFormat('id-ID').format(amount);
+  };
+
   const pendingTopUps = topUpRequests.filter(req => req.status === 'tertunda').slice(0, 5);
   const recentStores = stores.sort((a, b) => new Date(b.registrationDate).getTime() - new Date(a.registrationDate).getTime()).slice(0, 5);
 
@@ -29,7 +33,7 @@ export default function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Saldo Token"
-          value={formatCurrency(dashboardStats.totalTokenBalance)}
+          value={formatNumber(dashboardStats.totalTokenBalance)}
           icon={WalletCards}
           description="Gabungan saldo dari semua toko"
         />
@@ -79,7 +83,7 @@ export default function DashboardPage() {
                         {pendingTopUps.map(req => (
                             <TableRow key={req.id}>
                                 <TableCell className='font-medium'>{req.storeName}</TableCell>
-                                <TableCell className='text-right'>{formatCurrency(req.amount)}</TableCell>
+                                <TableCell className='text-right'>{formatNumber(req.amount)}</TableCell>
                             </TableRow>
                         ))}
                     </TableBody>

@@ -49,13 +49,8 @@ export function TopUpRequestsTable({ requests }: { requests: TopUpRequest[] }) {
         });
     };
     
-    const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('id-ID', {
-          style: 'currency',
-          currency: 'IDR',
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 0,
-        }).format(amount);
+    const formatNumber = (amount: number) => {
+        return new Intl.NumberFormat('id-ID').format(amount);
     };
 
     const formatDate = (dateString: string | Date) => {
@@ -85,7 +80,7 @@ export function TopUpRequestsTable({ requests }: { requests: TopUpRequest[] }) {
               <TableRow key={request.id}>
                 <TableCell className="font-medium">{request.storeName}</TableCell>
                 <TableCell>
-                  {formatCurrency(request.amount)}
+                  {formatNumber(request.amount)}
                 </TableCell>
                 <TableCell>{formatDate(request.requestDate)}</TableCell>
                 <TableCell>
