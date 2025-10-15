@@ -8,10 +8,11 @@ import type { Store, UserProfile } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Mail, Phone, MapPin, User, Building, Wallet, CalendarClock, Shield, UserCog } from 'lucide-react';
+import { Mail, Phone, MapPin, User, Building, Wallet, CalendarClock, Shield, UserCog, AlertCircle } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function StoreDetailPage() {
   const params = useParams();
@@ -28,10 +29,11 @@ export default function StoreDetailPage() {
     return query(collection(firestore, 'users'), where('storeId', '==', storeId));
   }, [firestore, storeId]);
 
-  const { data: store, isLoading: isLoadingStore } = useDoc<Store>(storeRef);
-  const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
+  const { data: store, isLoading: isLoadingStore, error: storeError } = useDoc<Store>(storeRef);
+  const { data: users, isLoading: isLoadingUsers, error: usersError } = useCollection<UserProfile>(usersQuery);
 
   const isLoading = isLoadingStore || isLoadingUsers;
+  const error = storeError || usersError;
 
   const formatNumber = (amount: number | undefined) => {
     if (amount === undefined) return '0';
@@ -46,7 +48,7 @@ export default function StoreDetailPage() {
 
   const getDisplayData = () => {
     if (!store) return null;
-    const owner = users?.[0]; // Assume the first user found is the owner for display purposes
+    const owner = users?.[0]; 
     return {
       ...store,
       ownerName: owner?.name,
@@ -71,6 +73,19 @@ export default function StoreDetailPage() {
                 <Skeleton className="h-64 w-full md:col-span-1" />
             </div>
         </div>
+    );
+  }
+
+  if (error) {
+     return (
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Gagal Memuat Data</AlertTitle>
+        <AlertDescription>
+          Tidak dapat memuat detail toko. Kemungkinan ada masalah izin akses data.
+          <pre className="mt-2 text-xs bg-black/10 p-2 rounded-md whitespace-pre-wrap">{error.message}</pre>
+        </AlertDescription>
+      </Alert>
     );
   }
 
@@ -144,14 +159,16 @@ export default function StoreDetailPage() {
                 <Button variant="outline" size="sm">Kelola Admin</Button>
             </CardHeader>
             <CardContent>
-                {(!displayData.adminUids || displayData.adminUids.length === 0) ? (
-                    <div className='text-sm text-muted-foreground py-4 text-center'>Belum ada admin yang ditugaskan.</div>
+                {(!users || users.length === 0) ? (
+                    <div className='text-sm text-muted-foreground py-4 text-center'>
+                      {(isLoadingUsers && !usersError) ? 'Mencari admin...' : 'Belum ada admin yang ditugaskan.'}
+                    </div>
                 ) : (
                     <ul className='space-y-3 text-sm pt-2'>
-                        {displayData.adminUids.map(uid => (
-                            <li key={uid} className="flex items-center">
+                        {users.map(user => (
+                            <li key={user.id} className="flex items-center">
                                 <Shield className="mr-3 h-4 w-4 text-muted-foreground" />
-                                <span className='font-mono text-xs'>{uid}</span>
+                                <span className='font-mono text-xs'>{user.id}</span>
                             </li>
                         ))}
                     </ul>
