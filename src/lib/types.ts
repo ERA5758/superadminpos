@@ -1,3 +1,4 @@
+
 import { Timestamp } from "firebase/firestore";
 
 export type Store = {
@@ -5,17 +6,12 @@ export type Store = {
   name: string;
   isActive: boolean;
   tokenBalance: number;
-  premiumCatalogSubscriptionId?: string;
+  premiumCatalogSubscriptionExpiry?: Timestamp | Date | string | null;
   ownerName: string;
   contactPhone: string;
   contactEmail: string;
   address: string;
   description: string;
-  // Fields below are from static data and might not be in Firestore
-  status?: 'aktif' | 'tidak aktif';
-  isPremium?: boolean;
-  owner?: string;
-  registrationDate?: string;
 };
 
 export type TopUpRequest = {
@@ -35,3 +31,5 @@ export type Transaction = {
   type: 'Isi Ulang' | 'Biaya' | 'Penjualan';
   status: 'Selesai' | 'Tertunda' | 'Gagal';
 };
+
+    

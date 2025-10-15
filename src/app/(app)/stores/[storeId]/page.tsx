@@ -1,16 +1,18 @@
+
 'use client';
 
 import { useParams } from 'next/navigation';
 import { useDoc, useMemoFirebase } from '@/firebase';
 import { useFirestore } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { doc, Timestamp } from 'firebase/firestore';
 import type { Store } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Mail, Phone, MapPin, User, Building, Wallet, GanttChartSquare } from 'lucide-react';
+import { Mail, Phone, MapPin, User, Building, Wallet, GanttChartSquare, CalendarClock } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { PlaceHolderImages } from "@/lib/placeholder-images";
+import { format } from 'date-fns';
 
 
 export default function StoreDetailPage() {
@@ -30,6 +32,12 @@ export default function StoreDetailPage() {
     if (amount === undefined) return '0';
     return new Intl.NumberFormat('id-ID').format(amount);
   };
+  
+  const isStorePremium = (store: Store | null): boolean => {
+    if (!store || !store.premiumCatalogSubscriptionExpiry) return false;
+    const expiryDate = (store.premiumCatalogSubscriptionExpiry as Timestamp).toDate();
+    return expiryDate > new Date();
+  }
 
   if (isLoading) {
     return (
@@ -53,6 +61,8 @@ export default function StoreDetailPage() {
     return <div>Toko tidak ditemukan.</div>;
   }
 
+  const premium = isStorePremium(store);
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-6">
@@ -68,7 +78,7 @@ export default function StoreDetailPage() {
                     <Badge variant={store.isActive ? "default" : "destructive"} className={store.isActive ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/20 hover:bg-emerald-500/20" : ""}>
                         {store.isActive ? 'Aktif' : 'Tidak Aktif'}
                     </Badge>
-                    {!!store.premiumCatalogSubscriptionId && <Badge className="bg-amber-500/10 text-amber-700 border-amber-500/20 hover:bg-amber-500/20">Premium</Badge>}
+                    {premium && <Badge className="bg-amber-500/10 text-amber-700 border-amber-500/20 hover:bg-amber-500/20">Premium</Badge>}
                 </div>
                 <p className="text-muted-foreground mt-1">{store.description || 'Tidak ada deskripsi toko.'}</p>
             </div>
@@ -88,10 +98,12 @@ export default function StoreDetailPage() {
                     <Wallet className="mr-3 h-4 w-4 text-muted-foreground" />
                     <span>Saldo Token: <strong>{formatNumber(store.tokenBalance)}</strong></span>
                 </div>
-                <div className="flex items-center">
-                    <GanttChartSquare className="mr-3 h-4 w-4 text-muted-foreground" />
-                    <span>ID Langganan Premium: <code className='text-xs bg-muted p-1 rounded-sm'>{store.premiumCatalogSubscriptionId || 'Tidak berlangganan'}</code></span>
-                </div>
+                {store.premiumCatalogSubscriptionExpiry && (
+                    <div className="flex items-center">
+                        <CalendarClock className="mr-3 h-4 w-4 text-muted-foreground" />
+                        <span>Premium hingga: <strong>{format((store.premiumCatalogSubscriptionExpiry as Timestamp).toDate(), 'd MMMM yyyy')}</strong></span>
+                    </div>
+                )}
             </CardContent>
         </Card>
 
@@ -123,3 +135,5 @@ export default function StoreDetailPage() {
     </div>
   );
 }
+
+    

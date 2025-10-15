@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -13,8 +14,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { MoreHorizontal, Pencil, ShieldCheck, ToggleLeft, ToggleRight } from "lucide-react";
+import { MoreHorizontal, Pencil, ShieldCheck, ToggleLeft, ToggleRight, Star, PlusCircle, MinusCircle, CalendarPlus } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,6 +22,10 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu";
 import {
     Dialog,
@@ -35,19 +39,22 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useFirestore } from "@/firebase";
-import { doc, increment, serverTimestamp } from "firebase/firestore";
+import { doc, increment, serverTimestamp, Timestamp } from "firebase/firestore";
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { add, format } from "date-fns";
 
 export function StoresTable({ stores }: { stores: Store[] }) {
     const router = useRouter();
     const firestore = useFirestore();
     const { toast } = useToast();
 
-    const [openDialog, setOpenDialog] = useState(false);
+    const [balanceDialog, setBalanceDialog] = useState(false);
+    const [premiumDialog, setPremiumDialog] = useState(false);
     const [selectedStore, setSelectedStore] = useState<Store | null>(null);
     const [adjustmentAmount, setAdjustmentAmount] = useState(0);
+    const [premiumDuration, setPremiumDuration] = useState<number | null>(null);
 
     const handleRowClick = (storeId: string) => {
         router.push(`/stores/${storeId}`);
@@ -57,15 +64,21 @@ export function StoresTable({ stores }: { stores: Store[] }) {
         e.stopPropagation();
     }
 
-    const handleOpenDialog = (store: Store) => {
+    const handleOpenBalanceDialog = (store: Store) => {
         setSelectedStore(store);
         setAdjustmentAmount(0);
-        setOpenDialog(true);
+        setBalanceDialog(true);
     }
+    
+    const handleOpenPremiumDialog = (store: Store, months: number) => {
+        setSelectedStore(store);
+        setPremiumDuration(months);
+        setPremiumDialog(true);
+    };
 
     const handleAdjustBalance = () => {
         if (!firestore || !selectedStore || adjustmentAmount === 0) {
-            setOpenDialog(false);
+            setBalanceDialog(false);
             return;
         };
 
@@ -79,8 +92,61 @@ export function StoresTable({ stores }: { stores: Store[] }) {
             description: `Berhasil mengajukan penyesuaian saldo untuk ${selectedStore.name} sebesar ${formatNumber(adjustmentAmount)}. Perubahan akan segera terlihat.`,
         });
 
-        setOpenDialog(false);
+        setBalanceDialog(false);
         setSelectedStore(null);
+    }
+
+    const handleSetPremium = () => {
+        if (!firestore || !selectedStore || !premiumDuration) {
+            setPremiumDialog(false);
+            return;
+        }
+
+        const storeRef = doc(firestore, "stores", selectedStore.id);
+
+        let currentExpiry: Date;
+        if (selectedStore.premiumCatalogSubscriptionExpiry) {
+            // If expiry is a Firestore Timestamp, convert it to a Date
+            if (selectedStore.premiumCatalogSubscriptionExpiry instanceof Timestamp) {
+                currentExpiry = selectedStore.premiumCatalogSubscriptionExpiry.toDate();
+            } else {
+                // Otherwise, assume it's a string or Date object
+                currentExpiry = new Date(selectedStore.premiumCatalogSubscriptionExpiry as any);
+            }
+            // Check if current expiry is in the past, if so, start from now
+            if (currentExpiry < new Date()) {
+                currentExpiry = new Date();
+            }
+        } else {
+            currentExpiry = new Date();
+        }
+        
+        const newExpiryDate = add(currentExpiry, { months: premiumDuration });
+
+        updateDocumentNonBlocking(storeRef, {
+            premiumCatalogSubscriptionExpiry: Timestamp.fromDate(newExpiryDate)
+        });
+
+        toast({
+            title: "Langganan Premium Diperbarui",
+            description: `${selectedStore.name} sekarang premium hingga ${format(newExpiryDate, 'd MMMM yyyy')}.`,
+        });
+        
+        setPremiumDialog(false);
+        setSelectedStore(null);
+        setPremiumDuration(null);
+    }
+
+    const handleStopPremium = (store: Store) => {
+         if (!firestore) return;
+        const storeRef = doc(firestore, "stores", store.id);
+        updateDocumentNonBlocking(storeRef, { 
+            premiumCatalogSubscriptionExpiry: null
+        });
+        toast({
+            title: `Langganan Premium Dihentikan`,
+            description: `Langganan premium untuk ${store.name} telah dihentikan.`,
+        });
     }
 
     const handleToggleActive = (store: Store) => {
@@ -93,21 +159,11 @@ export function StoresTable({ stores }: { stores: Store[] }) {
             description: `${store.name} telah berhasil ${newStatus ? 'diaktifkan' : 'dinonaktifkan'}.`,
         });
     }
-
-    const handleTogglePremium = (store: Store) => {
-        if (!firestore) return;
-        const storeRef = doc(firestore, "stores", store.id);
-        const isCurrentlyPremium = !!store.premiumCatalogSubscriptionId;
-        const newPremiumStatus = !isCurrentlyPremium;
-
-        updateDocumentNonBlocking(storeRef, { 
-            premiumCatalogSubscriptionId: newPremiumStatus ? 'sub_premium_placeholder' : null
-        });
-
-        toast({
-            title: `Langganan Premium Diperbarui`,
-            description: `${store.name} sekarang ${newPremiumStatus ? 'menjadi' : 'berhenti menjadi'} pelanggan premium.`,
-        });
+    
+    const isStorePremium = (store: Store): boolean => {
+        if (!store.premiumCatalogSubscriptionExpiry) return false;
+        const expiryDate = (store.premiumCatalogSubscriptionExpiry as Timestamp).toDate();
+        return expiryDate > new Date();
     }
 
     const formatNumber = (amount: number) => {
@@ -130,7 +186,9 @@ export function StoresTable({ stores }: { stores: Store[] }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {stores.map((store) => (
+            {stores.map((store) => {
+              const premium = isStorePremium(store);
+              return (
               <TableRow key={store.id} onClick={() => handleRowClick(store.id)} className="cursor-pointer">
                 <TableCell className="font-medium">
                     <div>{store.name}</div>
@@ -140,8 +198,8 @@ export function StoresTable({ stores }: { stores: Store[] }) {
                   {formatNumber(store.tokenBalance)}
                 </TableCell>
                 <TableCell>
-                    <Badge variant={store.premiumCatalogSubscriptionId ? 'default' : 'outline'} className={cn(store.premiumCatalogSubscriptionId && 'bg-amber-500/10 text-amber-700 border-amber-500/20 hover:bg-amber-500/20')}>
-                        {store.premiumCatalogSubscriptionId ? 'Ya' : 'Tidak'}
+                    <Badge variant={premium ? 'default' : 'outline'} className={cn(premium && 'bg-amber-500/10 text-amber-700 border-amber-500/20 hover:bg-amber-500/20')}>
+                        {premium ? 'Ya' : 'Tidak'}
                     </Badge>
                 </TableCell>
                 <TableCell>
@@ -159,16 +217,43 @@ export function StoresTable({ stores }: { stores: Store[] }) {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Aksi Cepat</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => handleOpenDialog(store)}>
+                            <DropdownMenuItem onClick={() => handleOpenBalanceDialog(store)}>
                                 <Pencil className="mr-2 h-4 w-4" />
                                 Sesuaikan Saldo Token
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleTogglePremium(store)}>
-                                {!!store.premiumCatalogSubscriptionId ? <ToggleLeft className="mr-2 h-4 w-4" /> : <ShieldCheck className="mr-2 h-4 w-4" />}
-                                {!!store.premiumCatalogSubscriptionId ? 'Hentikan Premium' : 'Jadikan Premium'}
-                            </DropdownMenuItem>
+                            
+                            <DropdownMenuSub>
+                                <DropdownMenuSubTrigger>
+                                    <Star className="mr-2 h-4 w-4" />
+                                    <span>Kelola Premium</span>
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuPortal>
+                                    <DropdownMenuSubContent>
+                                        <DropdownMenuItem onClick={() => handleOpenPremiumDialog(store, 1)}>
+                                            <PlusCircle className="mr-2 h-4 w-4" />
+                                            <span>Tambah 1 Bulan</span>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleOpenPremiumDialog(store, 6)}>
+                                            <PlusCircle className="mr-2 h-4 w-4" />
+                                            <span>Tambah 6 Bulan</span>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleOpenPremiumDialog(store, 12)}>
+                                            <PlusCircle className="mr-2 h-4 w-4" />
+                                            <span>Tambah 1 Tahun</span>
+                                        </DropdownMenuItem>
+                                        {premium && <>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem onClick={() => handleStopPremium(store)} className="text-destructive focus:text-destructive">
+                                                <MinusCircle className="mr-2 h-4 w-4" />
+                                                <span>Hentikan Langganan</span>
+                                            </DropdownMenuItem>
+                                        </>}
+                                    </DropdownMenuSubContent>
+                                </DropdownMenuPortal>
+                            </DropdownMenuSub>
+
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => handleToggleActive(store)} className={!store.isActive ? 'text-emerald-600' : 'text-destructive focus:text-destructive'}>
+                            <DropdownMenuItem onClick={() => handleToggleActive(store)} className={!store.isActive ? 'text-emerald-600 focus:text-emerald-600' : 'text-destructive focus:text-destructive'}>
                                 {store.isActive ? <ToggleLeft className="mr-2 h-4 w-4" /> : <ToggleRight className="mr-2 h-4 w-4" />}
                                 {store.isActive ? 'Nonaktifkan' : 'Aktifkan'} Toko
                             </DropdownMenuItem>
@@ -176,13 +261,13 @@ export function StoresTable({ stores }: { stores: Store[] }) {
                     </DropdownMenu>
                 </TableCell>
               </TableRow>
-            ))}
+            )})}
           </TableBody>
         </Table>
       </CardContent>
     </Card>
 
-    <Dialog open={openDialog} onOpenChange={setOpenDialog}>
+    <Dialog open={balanceDialog} onOpenChange={setBalanceDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle className="font-headline">Sesuaikan Saldo Token</DialogTitle>
@@ -214,10 +299,31 @@ export function StoresTable({ stores }: { stores: Store[] }) {
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="secondary" onClick={() => setOpenDialog(false)}>Batal</Button>
+            <Button type="button" variant="secondary" onClick={() => setBalanceDialog(false)}>Batal</Button>
             <Button type="submit" onClick={handleAdjustBalance} disabled={adjustmentAmount === 0}>Simpan perubahan</Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+    </Dialog>
+    
+    <Dialog open={premiumDialog} onOpenChange={setPremiumDialog}>
+        <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+                <DialogTitle className="font-headline">Konfirmasi Langganan Premium</DialogTitle>
+                <DialogDescription>
+                    Anda akan memperpanjang langganan premium untuk <strong>{selectedStore?.name}</strong> selama <strong>{premiumDuration} bulan</strong>.
+                </DialogDescription>
+            </DialogHeader>
+             <div className="space-y-2 text-sm">
+                <p>Tanggal kedaluwarsa saat ini: {selectedStore?.premiumCatalogSubscriptionExpiry ? format((selectedStore.premiumCatalogSubscriptionExpiry as Timestamp).toDate(), 'd MMMM yyyy') : 'Tidak ada'}</p>
+                <p>Tanggal kedaluwarsa baru akan menjadi: <strong>{premiumDuration && format(add(selectedStore?.premiumCatalogSubscriptionExpiry?.toDate() || new Date(), { months: premiumDuration }), 'd MMMM yyyy')}</strong></p>
+            </div>
+            <DialogFooter>
+                <Button variant="secondary" onClick={() => setPremiumDialog(false)}>Batal</Button>
+                <Button onClick={handleSetPremium}>Konfirmasi dan Simpan</Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
     </>
   );
+
+    
