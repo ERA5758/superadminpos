@@ -35,7 +35,7 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useFirestore } from "@/firebase";
-import { doc, increment } from "firebase/firestore";
+import { doc, increment, serverTimestamp } from "firebase/firestore";
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -70,13 +70,13 @@ export function StoresTable({ stores }: { stores: Store[] }) {
         };
 
         const storeRef = doc(firestore, "stores", selectedStore.id);
-        updateDocumentNonBlocking(storeRef, { 
-            tokenBalance: increment(adjustmentAmount)
-        });
+        const updateData = { tokenBalance: increment(adjustmentAmount) };
+
+        updateDocumentNonBlocking(storeRef, updateData);
 
         toast({
-            title: "Saldo Disesuaikan",
-            description: `Berhasil mengajukan penyesuaian saldo untuk ${selectedStore.name} sebesar ${formatNumber(adjustmentAmount)}.`,
+            title: "Pengajuan Penyesuaian Saldo",
+            description: `Berhasil mengajukan penyesuaian saldo untuk ${selectedStore.name} sebesar ${formatNumber(adjustmentAmount)}. Perubahan akan segera terlihat.`,
         });
 
         setOpenDialog(false);
@@ -145,7 +145,7 @@ export function StoresTable({ stores }: { stores: Store[] }) {
                     </Badge>
                 </TableCell>
                 <TableCell>
-                    <Badge variant={store.isActive ? "default" : "destructive"} className={cn(store.isActive ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/20 hover:bg-emerald-500/20" : "")}>
+                     <Badge variant={store.isActive ? "default" : "destructive"} className={cn(store.isActive ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/20 hover:bg-emerald-500/20" : "")}>
                         {store.isActive ? 'Aktif' : 'Tidak Aktif'}
                     </Badge>
                 </TableCell>
@@ -210,7 +210,7 @@ export function StoresTable({ stores }: { stores: Store[] }) {
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
                 <Label className="text-right col-span-1">Saldo Baru</Label>
-                <div className="col-span-3 font-mono text-sm font-bold">{formatNumber((selectedStore?.tokenBalance || 0) + adjustmentAmount)}</div>
+                <div className="col-span-3 font-mono text-sm font-bold">{formatNumber(((selectedStore?.tokenBalance || 0) + adjustmentAmount))}</div>
             </div>
           </div>
           <DialogFooter>
@@ -221,4 +221,3 @@ export function StoresTable({ stores }: { stores: Store[] }) {
       </Dialog>
     </>
   );
-}
