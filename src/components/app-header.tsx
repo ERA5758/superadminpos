@@ -19,7 +19,7 @@ const getPageTitle = (pathname: string) => {
 export function AppHeader() {
   const pathname = usePathname();
   const title = getPageTitle(pathname);
-  const { isMobile, toggleSidebar } = useSidebar();
+  const { isMobile } = useSidebar();
 
   return (
     <header className={cn(
