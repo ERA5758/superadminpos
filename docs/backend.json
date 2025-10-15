@@ -218,6 +218,12 @@
         "settingValue",
         "description"
       ]
+    },
+    "AdminRole": {
+      "title": "AdminRole",
+      "type": "object",
+      "description": "An empty object whose document ID is a user's UID to signify admin privileges.",
+      "properties": {}
     }
   },
   "auth": {
@@ -311,9 +317,9 @@
       {
         "path": "/roles_admin/{adminId}",
         "definition": {
-          "entityName": "roles_admin",
+          "entityName": "AdminRole",
           "schema": {
-            "$ref": "#/backend/entities/PlatformOverview"
+            "$ref": "#/backend/entities/AdminRole"
           },
           "description": "Used for role-based access control, specifically to identify admin users. The existence of a document with the user's UID grants admin privileges.",
           "params": [

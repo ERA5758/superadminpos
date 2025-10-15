@@ -2,9 +2,10 @@
 
 import type { ReactNode } from "react";
 import { Coins, LogOut } from "lucide-react";
-import { useAuth, useUser } from "@/firebase";
+import { useAuth, useUser, useFirestore } from "@/firebase";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { doc, setDoc } from "firebase/firestore";
 
 import {
   SidebarProvider,
@@ -35,13 +36,20 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   const userAvatar = PlaceHolderImages.find(p => p.id === 'user-avatar-1');
   const { user, isUserLoading } = useUser();
   const auth = useAuth();
+  const firestore = useFirestore();
   const router = useRouter();
 
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.push('/login');
     }
-  }, [user, isUserLoading, router]);
+    // TEMPORARY: Grant admin role to the current user for development
+    if (firestore && user) {
+        const adminRoleRef = doc(firestore, "roles_admin", user.uid);
+        // We set an empty object. The existence of the document is what matters.
+        setDoc(adminRoleRef, {}).catch(console.error); 
+    }
+  }, [user, isUserLoading, router, firestore]);
 
   const handleLogout = () => {
     auth.signOut();
