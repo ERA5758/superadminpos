@@ -1,5 +1,9 @@
+'use client';
+
 import type { ReactNode } from "react";
 import { Coins } from "lucide-react";
+import { useAuth, useUser, initiateAnonymousSignIn } from "@/firebase";
+import { useEffect } from "react";
 
 import {
   SidebarProvider,
@@ -23,9 +27,36 @@ import { AppHeader } from "@/components/app-header";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import Link from "next/link";
+import { Skeleton } from "@/components/ui/skeleton";
+
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const userAvatar = PlaceHolderImages.find(p => p.id === 'user-avatar-1');
+  const { user, isUserLoading } = useUser();
+  const auth = useAuth();
+
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      initiateAnonymousSignIn(auth);
+    }
+  }, [auth, user, isUserLoading]);
+
+  if (isUserLoading || !user) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+            <div className="p-2 rounded-lg bg-primary">
+                <Coins className="text-primary-foreground size-8" />
+            </div>
+            <div className="flex flex-col items-center gap-2">
+                <h1 className="text-xl font-headline font-bold">Chika POS</h1>
+                <p className="text-sm text-muted-foreground">Konsol Admin</p>
+            </div>
+            <Skeleton className="h-4 w-32 mt-2" />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <SidebarProvider>
@@ -58,7 +89,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                     )}
                     <div className="flex flex-col group-data-[collapsible=icon]:hidden">
                         <span className="font-medium text-sm text-sidebar-foreground">Super Admin</span>
-                        <span className="text-xs text-sidebar-foreground/70">admin@chika.pos</span>
+                        <span className="text-xs text-sidebar-foreground/70">{user.email || 'Pengguna Anonim'}</span>
                     </div>
                 </Button>
             </DropdownMenuTrigger>
