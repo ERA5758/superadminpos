@@ -12,6 +12,7 @@ export type Store = {
   contactEmail: string;
   address: string;
   description: string;
+  adminUids?: string[];
 };
 
 export type TopUpRequest = {
@@ -33,4 +34,6 @@ export type Transaction = {
 };
 
     
+    
+
     
