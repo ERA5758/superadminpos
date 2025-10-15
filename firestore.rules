@@ -1,36 +1,14 @@
-/**
- * @file Firestore Security Rules
- * @description This ruleset enforces a role-based access control model, primarily using the existence of a user ID in the `/roles_admin` collection to grant administrator privileges. It also incorporates owner-only access for specific collections where applicable.
- *
- * Data Structure:
- * - /platform_overviews/{platformOverviewId}: Platform-wide overview data.
- * - /top_up_requests/{topUpRequestId}: Requests from stores to top up their token balance.
- * - /stores/{storeId}: Store information.
- * - /premium_catalog_subscriptions/{premiumCatalogSubscriptionId}: Premium catalog subscription details.
- * - /platform_settings/{platformSettingId}: Global platform settings.
- * - /roles_admin/{adminId}: Documents indicating admin status; the document ID is the user's UID.
- *
- * Key Security Decisions:
- * - Superadmin Access: Superadmin access is determined by the presence of a document in the `/roles_admin` collection where the document ID matches the user's UID.
- * - No User Listing: Listing users (or roles) is generally disallowed for security reasons.
- * - Ownership: The absence of user-owned collections means all collections are restricted to superadmins.
- *
- * Access Control Patterns:
- * - Platform Overview, Top Up Requests, Stores, Premium Catalog Subscriptions, Platform Settings: Admin-only access.
- * - Roles Admin: Only allow creation of admin role if the UID is the same as the document ID.
- */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Grants read and write access to platform overview documents only to superadmins.
+     * @description Grants superadmins full access to platform overview data.
      * @path /platform_overviews/{platformOverviewId}
-     * @allow (get, list) if isAdmin(): Allows a superadmin to read a platform overview document.
-     * @deny (get, list) if !isAdmin(): Denies a non-admin to read a platform overview document.
-     * @allow (create, update, delete) if isAdmin(): Allows a superadmin to modify platform overview documents.
-     * @deny (create, update, delete) if !isAdmin(): Denies a non-admin to modify platform overview documents.
-     * @principle Enforces admin-only access for sensitive platform overview data.
+     * @allow (get, list) User with UID 'admin123' (present in /roles_admin/admin123) can read the platform overview.
+     * @allow (create, update, delete) User with UID 'admin123' (present in /roles_admin/admin123) can modify the platform overview.
+     * @deny (get, list, create, update, delete) User with UID 'nonAdmin456' (NOT present in /roles_admin/nonAdmin456) cannot access this data.
+     * @principle Superadmin-only access to platform overview data.
      */
     match /platform_overviews/{platformOverviewId} {
       allow get: if isAdmin();
@@ -41,30 +19,28 @@ service cloud.firestore {
     }
 
     /**
-     * @description Grants read and write access to top-up request documents only to superadmins.
+     * @description Allows any authenticated user to create top-up requests, but only superadmins can read, update, or delete them.
      * @path /top_up_requests/{topUpRequestId}
-     * @allow (get, list) if isAdmin(): Allows a superadmin to read a top-up request document.
-     * @deny (get, list) if !isAdmin(): Denies a non-admin to read a top-up request document.
-     * @allow (create, update, delete) if isAdmin(): Allows a superadmin to modify top-up request documents.
-     * @deny (create, update, delete) if !isAdmin(): Denies a non-admin to modify top-up request documents.
-     * @principle Enforces admin-only access for managing top-up requests.
+     * @allow (create) User with UID 'user789' can create a top-up request.
+     * @allow (get, list, update, delete) User with UID 'admin123' (present in /roles_admin/admin123) can read, update, and delete top-up requests.
+     * @deny (get, list, update, delete) User with UID 'user789' cannot read, update, or delete top-up requests.
+     * @principle Superadmins manage top-up requests; users can only create them.
      */
     match /top_up_requests/{topUpRequestId} {
       allow get: if isAdmin();
       allow list: if isAdmin();
-      allow create: if isAdmin();
+      allow create: if isSignedIn();
       allow update: if isAdmin();
       allow delete: if isAdmin();
     }
 
     /**
-     * @description Grants read and write access to store documents only to superadmins.
+     * @description Grants superadmins full access to store data.
      * @path /stores/{storeId}
-     * @allow (get, list) if isAdmin(): Allows a superadmin to read store document.
-     * @deny (get, list) if !isAdmin(): Denies a non-admin to read store document.
-     * @allow (create, update, delete) if isAdmin(): Allows a superadmin to modify store documents.
-     * @deny (create, update, delete) if !isAdmin(): Denies a non-admin to modify store documents.
-     * @principle Enforces admin-only access for managing store data.
+     * @allow (get, list) User with UID 'admin123' (present in /roles_admin/admin123) can read store data.
+     * @allow (create, update, delete) User with UID 'admin123' (present in /roles_admin/admin123) can modify store data.
+     * @deny (get, list, create, update, delete) User with UID 'nonAdmin456' cannot access this data.
+     * @principle Superadmin-only access to store data.
      */
     match /stores/{storeId} {
       allow get: if isAdmin();
@@ -75,13 +51,12 @@ service cloud.firestore {
     }
 
     /**
-     * @description Grants read and write access to premium catalog subscription documents only to superadmins.
+     * @description Grants superadmins full access to premium catalog subscription data.
      * @path /premium_catalog_subscriptions/{premiumCatalogSubscriptionId}
-     * @allow (get, list) if isAdmin(): Allows a superadmin to read premium catalog subscription document.
-     * @deny (get, list) if !isAdmin(): Denies a non-admin to read premium catalog subscription document.
-     * @allow (create, update, delete) if isAdmin(): Allows a superadmin to modify premium catalog subscription documents.
-     * @deny (create, update, delete) if !isAdmin(): Denies a non-admin to modify premium catalog subscription documents.
-     * @principle Enforces admin-only access for managing premium catalog subscriptions.
+     * @allow (get, list) User with UID 'admin123' (present in /roles_admin/admin123) can read premium catalog subscription data.
+     * @allow (create, update, delete) User with UID 'admin123' (present in /roles_admin/admin123) can modify premium catalog subscription data.
+     * @deny (get, list, create, update, delete) User with UID 'nonAdmin456' cannot access this data.
+     * @principle Superadmin-only access to premium catalog subscription data.
      */
     match /premium_catalog_subscriptions/{premiumCatalogSubscriptionId} {
       allow get: if isAdmin();
@@ -92,13 +67,12 @@ service cloud.firestore {
     }
 
     /**
-     * @description Grants read and write access to platform setting documents only to superadmins.
+     * @description Grants superadmins full access to platform settings.
      * @path /platform_settings/{platformSettingId}
-     * @allow (get, list) if isAdmin(): Allows a superadmin to read platform setting document.
-     * @deny (get, list) if !isAdmin(): Denies a non-admin to read platform setting document.
-     * @allow (create, update, delete) if isAdmin(): Allows a superadmin to modify platform setting documents.
-     * @deny (create, update, delete) if !isAdmin(): Denies a non-admin to modify platform setting documents.
-     * @principle Enforces admin-only access for managing platform settings.
+     * @allow (get, list) User with UID 'admin123' (present in /roles_admin/admin123) can read platform settings.
+     * @allow (create, update, delete) User with UID 'admin123' (present in /roles_admin/admin123) can modify platform settings.
+     * @deny (get, list, create, update, delete) User with UID 'nonAdmin456' cannot access this data.
+     * @principle Superadmin-only access to platform settings.
      */
     match /platform_settings/{platformSettingId} {
       allow get: if isAdmin();
@@ -109,22 +83,19 @@ service cloud.firestore {
     }
 
     /**
-     * @description Manages admin roles. Only allows creation if the document ID matches the authenticated user's UID, thus assigning admin privileges to themselves.
+     * @description Defines admin roles based on the existence of a document with their UID as the document ID.
      * @path /roles_admin/{adminId}
-     * @allow create if request.auth.uid == adminId: Allows a user to create their own admin role document, effectively granting themselves admin privileges.
-     * @deny create if request.auth.uid != adminId: Prevents a user from creating an admin role document for another user.
-     * @allow get: if isAdmin();
-     * @allow list: if isAdmin();
-     * @allow update: if isAdmin() && resource.data.id == request.resource.data.id;
-     * @allow delete: if isAdmin();
-     * @principle Uses document existence to determine admin status.
+     * @allow (get) User with UID 'admin123' can verify their admin status by reading /roles_admin/admin123.
+     * @allow (create) This would need to be manually done by an existing admin.
+     * @deny (list, update, delete) Listing is not allowed. Updates and deletes are not supported.
+     * @principle Role-based access control: presence in this collection grants admin privileges.
      */
     match /roles_admin/{adminId} {
-      allow get: if isAdmin();
-      allow list: if isAdmin();
-      allow create: if request.auth.uid == adminId;
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow get: if request.auth.uid == adminId; // Only the admin user can read their own role.
+      allow list: if false; // prevent listing all admin users.
+      allow create: if false; // Creating admin accounts should be handled manually.
+      allow update: if false;
+      allow delete: if false;
     }
 
     /**
@@ -136,7 +107,7 @@ service cloud.firestore {
     }
 
     /**
-     * @description Checks if the current user is an administrator by verifying the existence of their UID in the /roles_admin collection.
+     * @description Checks if the current user is an admin by verifying the existence of a document in /roles_admin/{userId}.
      * @return {boolean} True if the user is an admin, false otherwise.
      */
     function isAdmin() {
@@ -144,9 +115,9 @@ service cloud.firestore {
     }
 
     /**
-     * @description Checks if the current user is the owner of the document.
-     * @param {string} userId The user ID to compare against the request's authentication UID.
-     * @return {boolean} True if the user is the owner, false otherwise.
+     * @description Checks if the provided userId matches the authenticated user's UID.
+     * @param {string} userId - The user ID to compare against the authenticated user's UID.
+     * @return {boolean} True if the userId matches the authenticated user's UID, false otherwise.
      */
     function isOwner(userId) {
       return request.auth.uid == userId;
