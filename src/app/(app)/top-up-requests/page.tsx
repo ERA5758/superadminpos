@@ -33,7 +33,7 @@ export default function TopUpRequestsPage() {
   }
 
   if (error) {
-    const isIndexError = error.message.includes("requires an index");
+    const isIndexError = error.message.includes("requires an index") || error.message.includes("The query requires an index");
     const firestoreIndexUrlMatch = error.message.match(/(https?:\/\/[^\s]+)/);
     const firestoreIndexUrl = firestoreIndexUrlMatch ? firestoreIndexUrlMatch[0] : null;
 
@@ -56,7 +56,7 @@ export default function TopUpRequestsPage() {
               </a>
             </>
           ) : (
-            <p>{error.message}</p>
+            <p>Terjadi kesalahan saat mengambil data: {error.message}. Pastikan aturan keamanan Firestore Anda mengizinkan query 'collectionGroup' pada 'topUpRequests'.</p>
           )}
         </AlertDescription>
       </Alert>
