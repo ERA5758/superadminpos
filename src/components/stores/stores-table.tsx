@@ -35,9 +35,10 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useFirestore } from "@/firebase";
-import { doc, increment, serverTimestamp } from "firebase/firestore";
+import { doc, increment } from "firebase/firestore";
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { useRouter } from "next/navigation";
+import { cn } from "@/lib/utils";
 
 export function StoresTable({ stores }: { stores: Store[] }) {
     const router = useRouter();
@@ -138,14 +139,15 @@ export function StoresTable({ stores }: { stores: Store[] }) {
                 <TableCell>
                   {formatNumber(store.tokenBalance)}
                 </TableCell>
-                <TableCell onClick={handleActionClick}>
-                    <div className="flex items-center">
-                        <Switch id={`premium-${store.id}`} checked={!!store.premiumCatalogSubscriptionId} onCheckedChange={() => handleTogglePremium(store)} aria-label="Langganan Premium"/>
-                        <Label htmlFor={`premium-${store.id}`} className="ml-2 sr-only">{!!store.premiumCatalogSubscriptionId ? 'Ya' : 'Tidak'}</Label>
-                    </div>
+                <TableCell>
+                    <Badge variant={store.premiumCatalogSubscriptionId ? 'default' : 'outline'} className={cn(store.premiumCatalogSubscriptionId && 'bg-amber-500/10 text-amber-700 border-amber-500/20 hover:bg-amber-500/20')}>
+                        {store.premiumCatalogSubscriptionId ? 'Ya' : 'Tidak'}
+                    </Badge>
                 </TableCell>
-                <TableCell onClick={handleActionClick}>
-                    <Switch id={`active-${store.id}`} checked={store.isActive} onCheckedChange={() => handleToggleActive(store)} aria-label="Status Aktif"/>
+                <TableCell>
+                    <Badge variant={store.isActive ? "default" : "destructive"} className={cn(store.isActive ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/20 hover:bg-emerald-500/20" : "")}>
+                        {store.isActive ? 'Aktif' : 'Tidak Aktif'}
+                    </Badge>
                 </TableCell>
                 <TableCell className="text-right" onClick={handleActionClick}>
                     <DropdownMenu>
@@ -166,7 +168,7 @@ export function StoresTable({ stores }: { stores: Store[] }) {
                                 {!!store.premiumCatalogSubscriptionId ? 'Hentikan Premium' : 'Jadikan Premium'}
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => handleToggleActive(store)} className={store.isActive ? 'text-destructive' : 'text-emerald-600'}>
+                            <DropdownMenuItem onClick={() => handleToggleActive(store)} className={!store.isActive ? 'text-emerald-600' : 'text-destructive focus:text-destructive'}>
                                 {store.isActive ? <ToggleLeft className="mr-2 h-4 w-4" /> : <ToggleRight className="mr-2 h-4 w-4" />}
                                 {store.isActive ? 'Nonaktifkan' : 'Aktifkan'} Toko
                             </DropdownMenuItem>
