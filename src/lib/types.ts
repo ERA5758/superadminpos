@@ -1,4 +1,3 @@
-
 import { Timestamp } from "firebase/firestore";
 
 export type Store = {
@@ -7,13 +6,22 @@ export type Store = {
   isActive: boolean;
   pradanaTokenBalance: number;
   premiumCatalogSubscriptionExpiry?: Timestamp | Date | string | null;
+  adminUids?: string[];
+  // Merged properties from StoreProfile for convenience
+  ownerName?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  address?: string;
+  description?: string;
+};
+
+export type StoreProfile = {
   ownerName: string;
   contactPhone: string;
   contactEmail: string;
   address: string;
   description: string;
-  adminUids?: string[];
-};
+}
 
 export type TopUpRequest = {
   id: string;
@@ -32,8 +40,5 @@ export type Transaction = {
   type: 'Isi Ulang' | 'Biaya' | 'Penjualan';
   status: 'Selesai' | 'Tertunda' | 'Gagal';
 };
-
-    
-    
 
     

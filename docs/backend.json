@@ -99,7 +99,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Store",
       "type": "object",
-      "description": "Represents a registered store (tenant) on the platform.",
+      "description": "Represents a registered store's operational data.",
       "properties": {
         "id": {
           "type": "string",
@@ -108,27 +108,6 @@
         "name": {
           "type": "string",
           "description": "Name of the store."
-        },
-        "description": {
-          "type": "string",
-          "description": "Description of the store."
-        },
-        "ownerName": {
-          "type": "string",
-          "description": "Name of the owner of the store."
-        },
-        "contactEmail": {
-          "type": "string",
-          "description": "Contact email address for the store.",
-          "format": "email"
-        },
-        "contactPhone": {
-          "type": "string",
-          "description": "Contact phone number for the store."
-        },
-        "address": {
-          "type": "string",
-          "description": "Physical address of the store."
         },
         "pradanaTokenBalance": {
           "type": "number",
@@ -154,10 +133,46 @@
       "required": [
         "id",
         "name",
-        "ownerName",
-        "contactEmail",
         "pradanaTokenBalance",
         "isActive"
+      ]
+    },
+    "StoreProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "StoreProfile",
+      "type": "object",
+      "description": "Represents the profile information for a store.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the store profile, same as the store ID."
+        },
+        "ownerName": {
+          "type": "string",
+          "description": "Name of the owner of the store."
+        },
+        "contactEmail": {
+          "type": "string",
+          "description": "Contact email address for the store.",
+          "format": "email"
+        },
+        "contactPhone": {
+          "type": "string",
+          "description": "Contact phone number for the store."
+        },
+        "address": {
+          "type": "string",
+          "description": "Physical address of the store."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the store."
+        }
+      },
+      "required": [
+        "id",
+        "ownerName",
+        "contactEmail"
       ]
     },
     "PremiumCatalogSubscription": {
@@ -281,11 +296,27 @@
           "schema": {
             "$ref": "#/backend/entities/Store"
           },
-          "description": "Stores store data. Accessible to superadmins for management.",
+          "description": "Stores operational data for a store. Accessible to superadmins for management.",
           "params": [
             {
               "name": "storeId",
               "description": "The unique identifier for the store."
+            }
+          ]
+        }
+      },
+       {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "StoreProfile",
+          "schema": {
+            "$ref": "#/backend/entities/StoreProfile"
+          },
+          "description": "Stores profile information for a store, where the document ID is the same as the storeId.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user/store profile, same as storeId."
             }
           ]
         }
@@ -339,7 +370,7 @@
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to provide a secure, scalable, and easily maintainable data model for the Chika POS F&B Admin Console. It emphasizes authorization independence through data denormalization to avoid complex `get()` calls in security rules and enable atomic operations. Structural segregation ensures that each collection has a homogeneous security posture, simplifying rule definitions.  The structure facilitates simple, robust, and easily debuggable security rules.\n\nKey aspects of the design include:\n\n*   **Authorization Independence (Denormalization):** The `Store` documents store the `premiumCatalogSubscriptionExpiry`. This avoids needing to read a separate subscription document to determine access rights.\n*   **Structural Segregation:**  Each collection is dedicated to a specific entity and access pattern, ensuring homogeneous security requirements within each collection.\n*   **QAPs (Rules are not Filters):** The structure allows for secure list operations by ensuring that listing collections does not expose data that the user is not authorized to access. For example, the `platform_overviews` collection is only accessible to superadmins.\n*   **DBAC (No Custom Claims):**  Authorization relies solely on `request.auth.uid`. Admin status can be checked via the existence of their `uid` in the `/roles_admin` collection, which can be used in rules to grant access to sensitive data."
+    "reasoning": "The Firestore structure is designed to provide a secure, scalable, and easily maintainable data model for the Chika POS F&B Admin Console. It emphasizes authorization independence through data denormalization to avoid complex `get()` calls in security rules and enable atomic operations. Structural segregation ensures that each collection has a homogeneous security posture, simplifying rule definitions.  The structure facilitates simple, robust, and easily debuggable security rules.\n\nKey aspects of the design include:\n\n*   **Authorization Independence (Denormalization):** The `Store` documents store the `premiumCatalogSubscriptionExpiry`. This avoids needing to read a separate subscription document to determine access rights.\n*   **Structural Segregation:**  Each collection is dedicated to a specific entity and access pattern, ensuring homogeneous security requirements within each collection. The `users` collection now holds store profile information, separating it from operational store data.\n*   **QAPs (Rules are not Filters):** The structure allows for secure list operations by ensuring that listing collections does not expose data that the user is not authorized to access. For example, the `platform_overviews` collection is only accessible to superadmins.\n*   **DBAC (No Custom Claims):**  Authorization relies solely on `request.auth.uid`. Admin status can be checked via the existence of their `uid` in the `/roles_admin` collection, which can be used in rules to grant access to sensitive data."
   }
 }
 
