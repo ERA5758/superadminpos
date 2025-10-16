@@ -1,8 +1,171 @@
+/**
+ * @fileoverview Firestore Security Rules for Chika POS F&B Admin Console.
+ *
+ * Core Philosophy: This ruleset employs a role-based access control (RBAC) model, supplemented by user-ownership checks where appropriate.  Superadmins, identified by their presence in the `/roles_admin` collection, have broad access. Store admins have more limited access, typically to their own data.
+ *
+ * Data Structure:
+ * - /platform_overviews/{platformOverviewId}: Contains aggregated platform metrics.  Only accessible to superadmins.
+ * - /stores/{storeId}/top_up_requests/{topUpRequestId}: Contains top-up requests. Superadmins can approve/reject. Stores are not able to directly access their own top up requests.
+ * - /stores/{storeId}: Contains store operational data. Only accessible to superadmins.
+ * - /users/{userId}: Contains user profile data. Accessible to the user themselves.
+ * - /premium_catalog_subscriptions/{premiumCatalogSubscriptionId}: Contains subscription details. Only accessible to superadmins.
+ * - /platform_settings/{platformSettingId}: Contains global platform settings. Only accessible to superadmins.
+ * - /roles_admin/{adminId}:  A list of superadmins.
+ *
+ * Key Security Decisions:
+ * - Superadmins have read and write access to platform-wide data.
+ * - Users can only read and write their own profile data.
+ * - Listing of users is disallowed.
+ *
+ * Denormalization for Authorization:
+ * - None, as the current structure uses roles via the `/roles_admin` collection.
+ *
+ * Structural Segregation:
+ * - Collections are segregated by entity type, each with a consistent security posture.
+ */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if true;
+
+    /**
+     * @description Grants superadmins read and write access to platform overview data.
+     * @path /platform_overviews/{platformOverviewId}
+     * @allow (get, create, update, delete) if isAdmin()
+     * @deny (get, create, update, delete) if !isAdmin()
+     * @principle Role-based access control (RBAC) restricts access to admins only.
+     */
+    match /platform_overviews/{platformOverviewId} {
+      allow get: if isAdmin();
+      allow list: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    /**
+     * @description Grants superadmins read and write access to top-up requests. Stores are not able to directly access their own top up requests.
+     * @path /stores/{storeId}/top_up_requests/{topUpRequestId}
+     * @allow (get, create, update, delete) if isAdmin()
+     * @deny (get, create, update, delete) if !isAdmin()
+     * @principle Role-based access control (RBAC) restricts access to admins only.
+     */
+    match /stores/{storeId}/top_up_requests/{topUpRequestId} {
+      allow get: if isAdmin();
+      allow list: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    /**
+     * @description Grants superadmins read and write access to store data.
+     * @path /stores/{storeId}
+     * @allow (get, create, update, delete) if isAdmin()
+     * @deny (get, create, update, delete) if !isAdmin()
+     * @principle Role-based access control (RBAC) restricts access to admins only.
+     */
+    match /stores/{storeId} {
+      allow get: if isAdmin();
+      allow list: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    /**
+     * @description Allows a user to read and write their own profile data.
+     * @path /users/{userId}
+     * @allow (get, create, update, delete) if isOwner(userId)
+     * @deny (get, create, update, delete) if !isOwner(userId)
+     * @principle Enforces user-ownership for profile data.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) && (resource.data.email == request.resource.data.email) ;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Grants superadmins read and write access to premium catalog subscription data.
+     * @path /premium_catalog_subscriptions/{premiumCatalogSubscriptionId}
+     * @allow (get, create, update, delete) if isAdmin()
+     * @deny (get, create, update, delete) if !isAdmin()
+     * @principle Role-based access control (RBAC) restricts access to admins only.
+     */
+    match /premium_catalog_subscriptions/{premiumCatalogSubscriptionId} {
+      allow get: if isAdmin();
+      allow list: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    /**
+     * @description Grants superadmins read and write access to platform settings.
+     * @path /platform_settings/{platformSettingId}
+     * @allow (get, create, update, delete) if isAdmin()
+     * @deny (get, create, update, delete) if !isAdmin()
+     * @principle Role-based access control (RBAC) restricts access to admins only.
+     */
+    match /platform_settings/{platformSettingId} {
+      allow get: if isAdmin();
+      allow list: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    /**
+     * @description Grants admin role based on document existence.
+     * @path /roles_admin/{adminId}
+     * @allow (get, create, delete) if isAdmin()
+     * @deny (get, create, delete) if !isAdmin()
+     *
+     */
+     match /roles_admin/{adminId} {
+        allow get: if isAdmin();
+        allow list: if false;
+        allow create: if isAdmin();
+        allow update: if false;
+        allow delete: if isAdmin();
+     }
+
+    // ------ Helper Functions ------
+
+    /**
+     * @description Checks if the user is signed in.
+     * @return {boolean} True if the user is signed in, false otherwise.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * @description Checks if the user is the owner of the document, based on the userId.
+     * @param {string} userId The user ID to compare with the request's auth UID.
+     * @return {boolean} True if the user is the owner, false otherwise.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+     /**
+      * @description Checks if the user is the owner of the document and the document exists.
+      * @param {string} userId The user ID to compare with the request's auth UID.
+      * @return {boolean} True if the user is the owner and document exists, false otherwise.
+      */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * @description Checks if the user has admin privileges.
+     * @return {boolean} True if the user is an admin, false otherwise.
+     */
+    function isAdmin() {
+        return exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
     }
   }
 }

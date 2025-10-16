@@ -28,8 +28,9 @@ export default function DashboardPage() {
     firestore ? query(collectionGroup(firestore, 'top_up_requests'), where('status', '==', 'tertunda'), orderBy('requestDate', 'desc'), limit(5)) : null,
   [firestore]);
 
+  // The 'createdAt' field might not exist yet, let's order by name for now to be safe
   const recentStoresQuery = useMemoFirebase(() => 
-    firestore ? query(collection(firestore, 'stores'), orderBy('createdAt', 'desc'), limit(5)) : null,
+    firestore ? query(collection(firestore, 'stores'), orderBy('name', 'desc'), limit(5)) : null,
   [firestore]);
 
   const { data: overviewData, isLoading: isLoadingOverview } = useCollection<PlatformOverview>(platformOverviewQuery);
@@ -63,7 +64,7 @@ export default function DashboardPage() {
   const isLoading = isLoadingOverview || isLoadingTopUps || isLoadingStores;
 
   // --- Render Skeletons ---
-  if (isLoading && !overview) {
+  if (isLoading && !overview && !pendingTopUps && !recentStores) {
     return (
       <div className="flex flex-col gap-6">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
