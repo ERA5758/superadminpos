@@ -14,7 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useFirestore } from "@/firebase";
-import { collection, doc, getDocs, query, updateDoc, where } from "firebase/firestore";
+import { collection, doc, getDocs, updateDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -40,29 +40,20 @@ type NotificationSettings = {
     waAdminGroup: string;
 }
 
+type SettingsData = {
+    bankInfo: BankInfo;
+    feeSettings: FeeSettings;
+    notificationSettings: NotificationSettings;
+};
+
 export default function SettingsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   
-  const [bankInfo, setBankInfo] = useState<BankInfo>({
-    bankName: "",
-    accountHolder: "",
-    accountNumber: "",
-  });
-
-  const [feeSettings, setFeeSettings] = useState<FeeSettings>({
-    feePercentage: 0,
-    minFeeRp: 0,
-    aiUsageFee: 0,
-    newStoreBonusTokens: 0,
-    catalogMonthlyFee: 0,
-    catalogSixMonthFee: 0,
-    catalogYearlyFee: 0
-  });
-
-  const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>({
-      waDeviceId: "",
-      waAdminGroup: ""
+  const [settings, setSettings] = useState<SettingsData>({
+    bankInfo: { bankName: "", accountHolder: "", accountNumber: "" },
+    feeSettings: { feePercentage: 0, minFeeRp: 0, aiUsageFee: 0, newStoreBonusTokens: 0, catalogMonthlyFee: 0, catalogSixMonthFee: 0, catalogYearlyFee: 0 },
+    notificationSettings: { waDeviceId: "", waAdminGroup: "" }
   });
   
   const [docIds, setDocIds] = useState<{[key: string]: string}>({});
@@ -76,9 +67,11 @@ export default function SettingsPage() {
         const settingsRef = collection(firestore, "appsetting");
         const querySnapshot = await getDocs(settingsRef);
         
-        const newBankInfo: Partial<BankInfo> = {};
-        const newFeeSettings: Partial<FeeSettings> = {};
-        const newNotificationSettings: Partial<NotificationSettings> = {};
+        const newSettings: SettingsData = {
+            bankInfo: { ...settings.bankInfo },
+            feeSettings: { ...settings.feeSettings },
+            notificationSettings: { ...settings.notificationSettings }
+        };
         const newDocIds: {[key: string]: string} = {};
 
         querySnapshot.forEach((doc) => {
@@ -87,20 +80,16 @@ export default function SettingsPage() {
           const value = data.settingValue;
           newDocIds[key] = doc.id;
 
-          if (key in bankInfo) {
-              (newBankInfo as any)[key] = value;
-          }
-          if (key in feeSettings) {
-              (newFeeSettings as any)[key] = Number(value);
-          }
-           if (key in notificationSettings) {
-              (newNotificationSettings as any)[key] = value;
+          if (key in newSettings.bankInfo) {
+              (newSettings.bankInfo as any)[key] = value;
+          } else if (key in newSettings.feeSettings) {
+              (newSettings.feeSettings as any)[key] = Number(value);
+          } else if (key in newSettings.notificationSettings) {
+              (newSettings.notificationSettings as any)[key] = value;
           }
         });
         
-        setBankInfo(prev => ({ ...prev, ...newBankInfo }));
-        setFeeSettings(prev => ({ ...prev, ...newFeeSettings }));
-        setNotificationSettings(prev => ({ ...prev, ...newNotificationSettings }));
+        setSettings(newSettings);
         setDocIds(newDocIds);
 
       } catch (error) {
@@ -118,21 +107,48 @@ export default function SettingsPage() {
   }, [firestore, toast]);
 
 
-  const handleInputChange = <T,>(setter: React.Dispatch<React.SetStateAction<T>>) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { id, value, type } = e.target;
-    setter((prev: T) => ({ ...prev, [id]: type === 'number' ? (value === '' ? '' : Number(value)) : value }));
+  const handleInputChange = <T extends keyof SettingsData>(
+    category: T,
+    key: keyof SettingsData[T]
+  ) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { value, type } = e.target;
+    let processedValue: string | number = value;
+    if (type === 'number') {
+        processedValue = value === '' ? 0 : Number(value);
+    }
+  
+    setSettings(prev => ({
+        ...prev,
+        [category]: {
+            ...prev[category],
+            [key]: processedValue
+        }
+    }));
   };
 
-  const handleSave = async (settings: Record<string, any>) => {
+  const handleFeePercentageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    const numericValue = value === '' ? 0 : parseFloat(value);
+     setSettings(prev => ({
+        ...prev,
+        feeSettings: {
+            ...prev.feeSettings,
+            feePercentage: isNaN(numericValue) ? 0 : numericValue / 100
+        }
+    }));
+  };
+
+  const handleSave = async (settingsToSave: Record<string, any>) => {
      if (!firestore) return;
      
-     const updates = Object.entries(settings).map(([key, value]) => {
+     const updates = Object.entries(settingsToSave).map(([key, value]) => {
          const docId = docIds[key];
          if (docId) {
              const docRef = doc(firestore, "appsetting", docId);
+             // Ensure value is a string for Firestore, as per original schema
              return updateDocumentNonBlocking(docRef, { settingValue: String(value) });
          }
-         return Promise.resolve();
+         return Promise.resolve(); // Should not happen if docIds are correct
      });
 
      try {
@@ -142,8 +158,7 @@ export default function SettingsPage() {
             description: "Perubahan Anda telah berhasil disimpan.",
         });
      } catch (error) {
-         // Errors are handled by the non-blocking update function via the emitter
-         // The toast for errors is handled there.
+         // Errors are handled by the non-blocking update function's catch block and emitter.
      }
   };
 
@@ -163,40 +178,40 @@ export default function SettingsPage() {
                 <div className="grid sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                     <Label htmlFor="feePercentage">Persentase Biaya (%)</Label>
-                    <Input id="feePercentage" type="number" value={feeSettings.feePercentage * 100} onChange={(e) => setFeeSettings(prev => ({...prev, feePercentage: parseFloat(e.target.value) / 100}))} />
+                    <Input id="feePercentage" type="number" value={settings.feeSettings.feePercentage * 100} onChange={handleFeePercentageChange} />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="minFeeRp">Biaya Minimum (Rp)</Label>
-                    <Input id="minFeeRp" type="number" value={feeSettings.minFeeRp} onChange={handleInputChange(setFeeSettings)} />
+                    <Input id="minFeeRp" type="number" value={settings.feeSettings.minFeeRp} onChange={handleInputChange('feeSettings', 'minFeeRp')} />
                 </div>
                 </div>
                 <div className="space-y-2">
                 <Label htmlFor="aiUsageFee">Biaya Penggunaan AI (per request)</Label>
-                <Input id="aiUsageFee" type="number" value={feeSettings.aiUsageFee} onChange={handleInputChange(setFeeSettings)} />
+                <Input id="aiUsageFee" type="number" value={settings.feeSettings.aiUsageFee} onChange={handleInputChange('feeSettings', 'aiUsageFee')} />
                 </div>
                 <div className="space-y-2">
                 <Label htmlFor="newStoreBonusTokens">Bonus Token Toko Baru</Label>
-                <Input id="newStoreBonusTokens" type="number" value={feeSettings.newStoreBonusTokens} onChange={handleInputChange(setFeeSettings)} />
+                <Input id="newStoreBonusTokens" type="number" value={settings.feeSettings.newStoreBonusTokens} onChange={handleInputChange('feeSettings', 'newStoreBonusTokens')} />
                 </div>
                 <div className="grid sm:grid-cols-3 gap-4">
                 <div className="space-y-2">
                     <Label htmlFor="catalogMonthlyFee">Langganan 1 Bulan (Rp)</Label>
-                    <Input id="catalogMonthlyFee" type="number" value={feeSettings.catalogMonthlyFee} onChange={handleInputChange(setFeeSettings)} />
+                    <Input id="catalogMonthlyFee" type="number" value={settings.feeSettings.catalogMonthlyFee} onChange={handleInputChange('feeSettings', 'catalogMonthlyFee')} />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="catalogSixMonthFee">Langganan 6 Bulan (Rp)</Label>
-                    <Input id="catalogSixMonthFee" type="number" value={feeSettings.catalogSixMonthFee} onChange={handleInputChange(setFeeSettings)} />
+                    <Input id="catalogSixMonthFee" type="number" value={settings.feeSettings.catalogSixMonthFee} onChange={handleInputChange('feeSettings', 'catalogSixMonthFee')} />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="catalogYearlyFee">Langganan 1 Tahun (Rp)</Label>
-                    <Input id="catalogYearlyFee" type="number" value={feeSettings.catalogYearlyFee} onChange={handleInputChange(setFeeSettings)} />
+                    <Input id="catalogYearlyFee" type="number" value={settings.feeSettings.catalogYearlyFee} onChange={handleInputChange('feeSettings', 'catalogYearlyFee')} />
                 </div>
                 </div>
             </div>
           )}
         </CardContent>
         <CardFooter className="border-t px-6 py-4">
-          <Button onClick={() => handleSave(feeSettings)} disabled={isLoading}>Simpan Perubahan</Button>
+          <Button onClick={() => handleSave(settings.feeSettings)} disabled={isLoading}>Simpan Perubahan</Button>
         </CardFooter>
       </Card>
 
@@ -212,21 +227,21 @@ export default function SettingsPage() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="bankName">Nama Bank</Label>
-                <Input id="bankName" value={bankInfo.bankName} onChange={handleInputChange(setBankInfo)} />
+                <Input id="bankName" value={settings.bankInfo.bankName} onChange={handleInputChange('bankInfo', 'bankName')} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="accountHolder">Nama Pemegang Rekening</Label>
-                <Input id="accountHolder" value={bankInfo.accountHolder} onChange={handleInputChange(setBankInfo)} />
+                <Input id="accountHolder" value={settings.bankInfo.accountHolder} onChange={handleInputChange('bankInfo', 'accountHolder')} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="accountNumber">Nomor Rekening</Label>
-                <Input id="accountNumber" value={bankInfo.accountNumber} onChange={handleInputChange(setBankInfo)} />
+                <Input id="accountNumber" value={settings.bankInfo.accountNumber} onChange={handleInputChange('bankInfo', 'accountNumber')} />
               </div>
             </div>
           )}
         </CardContent>
         <CardFooter className="border-t px-6 py-4">
-          <Button onClick={() => handleSave(bankInfo)} disabled={isLoading}>Simpan Perubahan</Button>
+          <Button onClick={() => handleSave(settings.bankInfo)} disabled={isLoading}>Simpan Perubahan</Button>
         </CardFooter>
       </Card>
       
@@ -242,17 +257,17 @@ export default function SettingsPage() {
             <div className="space-y-4">
                 <div className="space-y-2">
                 <Label htmlFor="waDeviceId">Device ID WhatsApp</Label>
-                <Input id="waDeviceId" value={notificationSettings.waDeviceId} onChange={handleInputChange(setNotificationSettings)} />
+                <Input id="waDeviceId" value={settings.notificationSettings.waDeviceId} onChange={handleInputChange('notificationSettings', 'waDeviceId')} />
                 </div>
                 <div className="space-y-2">
                 <Label htmlFor="waAdminGroup">Grup Admin WhatsApp</Label>
-                <Input id="waAdminGroup" value={notificationSettings.waAdminGroup} onChange={handleInputChange(setNotificationSettings)} />
+                <Input id="waAdminGroup" value={settings.notificationSettings.waAdminGroup} onChange={handleInputChange('notificationSettings', 'waAdminGroup')} />
                 </div>
             </div>
           )}
         </CardContent>
         <CardFooter className="border-t px-6 py-4">
-          <Button onClick={() => handleSave(notificationSettings)} disabled={isLoading}>Simpan Perubahan</Button>
+          <Button onClick={() => handleSave(settings.notificationSettings)} disabled={isLoading}>Simpan Perubahan</Button>
         </CardFooter>
       </Card>
     </div>
@@ -278,5 +293,6 @@ function SettingsSkeleton() {
         </div>
     )
 }
+    
 
     
