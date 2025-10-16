@@ -181,7 +181,7 @@ export default function SettingsPage() {
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div className="space-y-2">
                     <Label htmlFor="feePercentage">Persentase Biaya (%)</Label>
-                    <Input id="feePercentage" type="number" value={settings.feeSettings.feePercentage * 100} onChange={e => setSettings(p => ({...p, feeSettings: {...p.feeSettings, feePercentage: parseFloat(e.target.value)/100}}))} />
+                    <Input id="feePercentage" type="number" value={settings.feeSettings.feePercentage * 100} onChange={e => setSettings(p => ({...p, feeSettings: {...p.feeSettings, feePercentage: parseFloat(e.target.value)/100 || 0}}))} />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="minFeeRp">Biaya Minimum (Rp)</Label>
@@ -307,6 +307,8 @@ function SettingsSkeleton({ count = 3 }: { count?: number }) {
         </div>
     )
 }
+    
+
     
 
     
