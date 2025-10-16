@@ -14,13 +14,12 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Pencil, ToggleLeft, ToggleRight } from "lucide-react";
+import { MoreHorizontal, Pencil } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -38,7 +37,6 @@ import { useFirestore } from "@/firebase";
 import { doc, increment, Timestamp } from "firebase/firestore";
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
 
 export function StoresTable({ stores }: { stores: Store[] }) {
     const firestore = useFirestore();
@@ -77,17 +75,6 @@ export function StoresTable({ stores }: { stores: Store[] }) {
         setBalanceDialog(false);
         setSelectedStore(null);
     }
-
-    const handleToggleActive = (store: Store) => {
-        if (!firestore) return;
-        const storeRef = doc(firestore, "stores", store.id);
-        const newStatus = !store.isActive;
-        updateDocumentNonBlocking(storeRef, { isActive: newStatus });
-        toast({
-            title: `Toko ${newStatus ? 'Diaktifkan' : 'Dinonaktifkan'}`,
-            description: `${store.name} telah berhasil ${newStatus ? 'diaktifkan' : 'dinonaktifkan'}.`,
-        });
-    }
     
     const isStorePremium = (store: Store): boolean => {
         if (!store.catalogSubscriptionExpiry) return false;
@@ -112,7 +99,6 @@ export function StoresTable({ stores }: { stores: Store[] }) {
               <TableHead>Nama Toko</TableHead>
               <TableHead>Saldo Token</TableHead>
               <TableHead>Premium</TableHead>
-              <TableHead>Status</TableHead>
               <TableHead className="text-right">Aksi</TableHead>
             </TableRow>
           </TableHeader>
@@ -133,11 +119,6 @@ export function StoresTable({ stores }: { stores: Store[] }) {
                         {premium ? 'Ya' : 'Tidak'}
                     </Badge>
                 </TableCell>
-                <TableCell>
-                     <Badge variant={store.isActive ? "default" : "destructive"} className={cn(store.isActive ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/20 hover:bg-emerald-500/20" : "")}>
-                        {store.isActive ? 'Aktif' : 'Tidak Aktif'}
-                    </Badge>
-                </TableCell>
                 <TableCell className="text-right" onClick={handleActionClick}>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -151,12 +132,6 @@ export function StoresTable({ stores }: { stores: Store[] }) {
                             <DropdownMenuItem onClick={() => handleOpenBalanceDialog(store)}>
                                 <Pencil className="mr-2 h-4 w-4" />
                                 Sesuaikan Saldo Token
-                            </DropdownMenuItem>
-                            
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => handleToggleActive(store)} className={!store.isActive ? 'text-emerald-600 focus:text-emerald-600' : 'text-destructive focus:text-destructive'}>
-                                {store.isActive ? <ToggleLeft className="mr-2 h-4 w-4" /> : <ToggleRight className="mr-2 h-4 w-4" />}
-                                {store.isActive ? 'Nonaktifkan' : 'Aktifkan'} Toko
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
@@ -214,9 +189,3 @@ export function StoresTable({ stores }: { stores: Store[] }) {
   );
 
 }
-
-    
-
-    
-
-    

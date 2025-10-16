@@ -3,7 +3,6 @@ import { Timestamp } from "firebase/firestore";
 export type Store = {
   id: string;
   name: string;
-  isActive: boolean;
   pradanaTokenBalance: number;
   catalogSubscriptionExpiry?: Timestamp | Date | string | null;
   createdAt: Timestamp | Date | string;
@@ -63,5 +62,3 @@ export type ReferralCode = {
   isActive: boolean;
   createdAt: Timestamp | Date | string;
 };
-
-    
