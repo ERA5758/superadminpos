@@ -18,7 +18,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 type FeeSettings = {
     growthChartData?: string;
-    totalRevenue?: number;
 };
 
 export default function DashboardPage() {
@@ -26,6 +25,7 @@ export default function DashboardPage() {
 
   const [totalTokenBalance, setTotalTokenBalance] = useState(0);
   const [totalTransactions, setTotalTransactions] = useState(0);
+  const [totalRevenue, setTotalRevenue] = useState(0);
 
   // --- Data Fetching ---
   const settingsDocRef = useMemoFirebase(() => 
@@ -64,11 +64,17 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (transactions) {
-       // Filter out 'topup' transactions and sum the amounts of the rest
+      // Calculate total token usage (POS + AI)
       const calculatedTransactions = transactions
         .filter(t => t.type === 'pos' || t.type === 'ai')
-        .reduce((acc, t) => acc + (t.amount || 0), 0);
+        .reduce((acc, t) => acc + Math.abs(t.amount || 0), 0); // Use Math.abs for usage
       setTotalTransactions(calculatedTransactions);
+
+      // Calculate total revenue from top-ups
+      const calculatedRevenue = transactions
+        .filter(t => t.type === 'topup')
+        .reduce((acc, t) => acc + (t.amount || 0), 0);
+      setTotalRevenue(calculatedRevenue);
     }
   }, [transactions]);
   
@@ -99,10 +105,10 @@ export default function DashboardPage() {
       }
   }
 
-  const isLoading = isLoadingSettings || isLoadingTopUps || isLoadingRecentStores || isLoadingStores || isLoadingTransactions;
+  const isLoading = isLoadingTopUps || isLoadingRecentStores || isLoadingStores || isLoadingTransactions;
 
   // --- Render Skeletons ---
-  if (isLoading && !settingsData && !pendingTopUps && !recentStores && !stores) {
+  if (isLoading && !pendingTopUps && !recentStores && !stores) {
     return (
       <div className="flex flex-col gap-6">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -145,9 +151,9 @@ export default function DashboardPage() {
         />
         <StatCard
           title="Total Pendapatan"
-          value={isLoadingSettings ? <Skeleton className='h-7 w-28'/> : formatCurrency(settingsData?.totalRevenue ?? 0)}
+          value={isLoadingTransactions ? <Skeleton className='h-7 w-28'/> : formatNumber(totalRevenue)}
           icon={Banknote}
-          description="Pendapatan platform"
+          description="Total dari semua top-up"
         />
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
@@ -256,3 +262,5 @@ function TableSkeleton({ rows = 5, cols = 2}: {rows?: number, cols?: number}) {
         </div>
     )
 }
+
+    

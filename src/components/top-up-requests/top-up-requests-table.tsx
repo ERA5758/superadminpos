@@ -18,7 +18,7 @@ import { CheckCircle2, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useFirestore } from "@/firebase";
-import { doc, increment, writeBatch, Timestamp } from "firebase/firestore";
+import { doc, increment, writeBatch, Timestamp, collection, addDoc } from "firebase/firestore";
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 
@@ -49,10 +49,20 @@ export function TopUpRequestsTable({ requests }: { requests: TopUpRequest[] }) {
 
         batch.update(requestRef, updateData);
 
-        // If approved, update the store's token balance
+        // If approved, update the store's token balance and create a transaction log
         if (action === 'disetujui') {
             const storeRef = doc(firestore, "stores", request.storeId);
             batch.update(storeRef, { pradanaTokenBalance: increment(request.amount) });
+            
+            // Create a new transaction log for the top-up
+            const transactionRef = doc(collection(firestore, "transactions"));
+            batch.set(transactionRef, {
+              storeId: request.storeId,
+              type: 'topup',
+              amount: request.amount,
+              createdAt: Timestamp.now(),
+              description: `Top-up disetujui untuk ${request.storeName}`
+            });
         }
         
         try {
@@ -153,3 +163,5 @@ export function TopUpRequestsTable({ requests }: { requests: TopUpRequest[] }) {
     </Card>
   );
 }
+
+    
