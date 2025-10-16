@@ -24,16 +24,21 @@ export default function DashboardPage() {
     firestore ? query(collection(firestore, 'platform_overviews'), limit(1)) : null, 
   [firestore]);
   
-  const topUpRequestsQuery = useMemoFirebase(() => 
-    firestore ? query(collectionGroup(firestore, 'topUpRequests'), where('status', '==', 'tertunda'), orderBy('requestDate', 'desc'), limit(5)) : null,
-  [firestore]);
+  // Temporarily disable this query as it causes permission errors
+  // const topUpRequestsQuery = useMemoFirebase(() => 
+  //   firestore ? query(collectionGroup(firestore, 'topUpRequests'), where('status', '==', 'tertunda'), orderBy('requestDate', 'desc'), limit(5)) : null,
+  // [firestore]);
 
   const recentStoresQuery = useMemoFirebase(() => 
     firestore ? query(collection(firestore, 'stores'), orderBy('createdAt', 'desc'), limit(5)) : null,
   [firestore]);
 
   const { data: overviewData, isLoading: isLoadingOverview } = useCollection<PlatformOverview>(platformOverviewQuery);
-  const { data: pendingTopUps, isLoading: isLoadingTopUps } = useCollection<TopUpRequest>(topUpRequestsQuery);
+  // Temporarily disable this hook
+  // const { data: pendingTopUps, isLoading: isLoadingTopUps } = useCollection<TopUpRequest>(topUpRequestsQuery);
+  const pendingTopUps: TopUpRequest[] = []; // Set to empty array
+  const isLoadingTopUps = false; // Set to false
+
   const { data: recentStores, isLoading: isLoadingStores } = useCollection<Store>(recentStoresQuery);
   
   const overview = overviewData?.[0];
@@ -120,37 +125,16 @@ export default function DashboardPage() {
             <CardHeader className='flex flex-row items-center justify-between'>
               <div>
                 <CardTitle className="font-headline">Verifikasi Top-up</CardTitle>
-                <CardDescription>5 permintaan terbaru</CardDescription>
+                <CardDescription>Fitur dinonaktifkan sementara</CardDescription>
               </div>
-              <Button asChild size="sm" variant="outline">
+              <Button asChild size="sm" variant="outline" disabled>
                 <Link href="/top-up-requests">Lihat Semua</Link>
               </Button>
             </CardHeader>
             <CardContent>
-              {isLoadingTopUps ? <TableSkeleton rows={5} cols={2} /> : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Toko</TableHead>
-                      <TableHead className='text-right'>Jumlah</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {pendingTopUps && pendingTopUps.length > 0 ? (
-                      pendingTopUps.map(req => (
-                        <TableRow key={req.id}>
-                          <TableCell className='font-medium'>{req.storeName}</TableCell>
-                          <TableCell className='text-right'>{formatNumber(req.amount)}</TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={2} className="text-center text-muted-foreground">Tidak ada permintaan.</TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              )}
+              <div className="text-center text-muted-foreground py-10">
+                Fitur ini sedang dalam perbaikan.
+              </div>
             </CardContent>
           </Card>
           <Card>
@@ -209,5 +193,7 @@ function TableSkeleton({ rows = 5, cols = 2}: {rows?: number, cols?: number}) {
         </div>
     )
 }
+
+    
 
     
