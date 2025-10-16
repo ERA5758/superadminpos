@@ -2,7 +2,7 @@
 'use client';
 
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collectionGroup, query, where, orderBy } from 'firebase/firestore';
+import { collection, query, where, orderBy } from 'firebase/firestore';
 import { TopUpRequestsTable } from '@/components/top-up-requests/top-up-requests-table';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { TopUpRequest } from '@/lib/types';
@@ -20,7 +20,7 @@ export default function TopUpRequestsPage() {
   const requestsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(
-        collectionGroup(firestore, 'top_up_requests'), 
+        collection(firestore, 'top_up_requests'), 
         where('status', '==', activeTab),
         orderBy('requestDate', 'desc')
     );
@@ -77,3 +77,5 @@ export default function TopUpRequestsPage() {
     </Tabs>
   );
 }
+
+    

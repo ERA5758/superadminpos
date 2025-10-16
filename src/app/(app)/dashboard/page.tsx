@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, collectionGroup, query, where, orderBy, limit, Timestamp } from 'firebase/firestore';
+import { collection, query, where, orderBy, limit, Timestamp } from 'firebase/firestore';
 import type { PlatformOverview, Store, TopUpRequest } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -25,10 +25,9 @@ export default function DashboardPage() {
   [firestore]);
   
   const topUpRequestsQuery = useMemoFirebase(() => 
-    firestore ? query(collectionGroup(firestore, 'top_up_requests'), where('status', '==', 'tertunda'), orderBy('requestDate', 'desc'), limit(5)) : null,
+    firestore ? query(collection(firestore, 'top_up_requests'), where('status', '==', 'tertunda'), orderBy('requestDate', 'desc'), limit(5)) : null,
   [firestore]);
 
-  // The 'createdAt' field might not exist yet, let's order by name for now to be safe
   const recentStoresQuery = useMemoFirebase(() => 
     firestore ? query(collection(firestore, 'stores'), orderBy('name', 'desc'), limit(5)) : null,
   [firestore]);
@@ -218,3 +217,5 @@ function TableSkeleton({ rows = 5, cols = 2}: {rows?: number, cols?: number}) {
         </div>
     )
 }
+
+    

@@ -19,7 +19,6 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useFirestore } from "@/firebase";
 import { doc, increment, writeBatch, Timestamp } from "firebase/firestore";
-import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 
@@ -39,8 +38,8 @@ export function TopUpRequestsTable({ requests }: { requests: TopUpRequest[] }) {
 
         const batch = writeBatch(firestore);
 
-        // Path to the top-up request document
-        const requestRef = doc(firestore, "stores", request.storeId, "top_up_requests", request.id);
+        // Path to the top-up request document in the root collection
+        const requestRef = doc(firestore, "top_up_requests", request.id);
         
         const updateData = { 
             status: action,
@@ -154,3 +153,5 @@ export function TopUpRequestsTable({ requests }: { requests: TopUpRequest[] }) {
     </Card>
   );
 }
+
+    
