@@ -13,21 +13,22 @@ import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, where, orderBy, limit, Timestamp, doc } from 'firebase/firestore';
-import type { PlatformOverview, Store, TopUpRequest } from '@/lib/types';
+import type { Store, TopUpRequest } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
 type FeeSettings = {
-    totalTokenBalance?: number;
-    totalRevenue?: number;
-    totalTransactions?: number;
     growthChartData?: string;
+    totalRevenue?: number;
 };
 
 export default function DashboardPage() {
   const firestore = useFirestore();
 
+  const [totalTokenBalance, setTotalTokenBalance] = useState(0);
+  const [totalTransactions, setTotalTransactions] = useState(0);
+
   // --- Data Fetching ---
-  const appSettingsDocRef = useMemoFirebase(() => 
+  const settingsDocRef = useMemoFirebase(() => 
     firestore ? doc(firestore, 'appSettings', 'transactionFees') : null,
   [firestore]);
 
@@ -43,10 +44,20 @@ export default function DashboardPage() {
     firestore ? query(collection(firestore, 'stores'), orderBy('name', 'desc'), limit(5)) : null,
   [firestore]);
 
-  const { data: settingsData, isLoading: isLoadingSettings } = useDoc<FeeSettings>(appSettingsDocRef);
-  const { data: stores, isLoading: isLoadingStoresCount } = useCollection<Store>(storesQuery);
+  const { data: settingsData, isLoading: isLoadingSettings } = useDoc<FeeSettings>(settingsDocRef);
+  const { data: stores, isLoading: isLoadingStores } = useCollection<Store>(storesQuery);
   const { data: pendingTopUps, isLoading: isLoadingTopUps, error: topUpsError } = useCollection<TopUpRequest>(topUpRequestsQuery);
   const { data: recentStores, isLoading: isLoadingRecentStores } = useCollection<Store>(recentStoresQuery);
+  
+  // --- Client-side Aggregation ---
+  useEffect(() => {
+    if (stores) {
+      const calculatedTokenBalance = stores.reduce((acc, store) => acc + (store.pradanaTokenBalance || 0), 0);
+      const calculatedTransactions = stores.reduce((acc, store) => acc + (store.totalTransactions || 0), 0);
+      setTotalTokenBalance(calculatedTokenBalance);
+      setTotalTransactions(calculatedTransactions);
+    }
+  }, [stores]);
   
   const growthChartData = settingsData?.growthChartData ? JSON.parse(settingsData.growthChartData) : [];
   const totalStores = stores?.length ?? 0;
@@ -75,10 +86,10 @@ export default function DashboardPage() {
       }
   }
 
-  const isLoading = isLoadingSettings || isLoadingTopUps || isLoadingRecentStores || isLoadingStoresCount;
+  const isLoading = isLoadingSettings || isLoadingTopUps || isLoadingRecentStores || isLoadingStores;
 
   // --- Render Skeletons ---
-  if (isLoading && !settingsData && !pendingTopUps && !recentStores) {
+  if (isLoading && !settingsData && !pendingTopUps && !recentStores && !stores) {
     return (
       <div className="flex flex-col gap-6">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -103,25 +114,25 @@ export default function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Saldo Token"
-          value={settingsData?.totalTokenBalance ? formatNumber(settingsData.totalTokenBalance) : '0'}
+          value={isLoadingStores ? <Skeleton className='h-7 w-24'/> : formatNumber(totalTokenBalance)}
           icon={WalletCards}
           description="Gabungan saldo dari semua toko"
         />
         <StatCard
           title="Total Toko Terdaftar"
-          value={totalStores.toString()}
+          value={isLoadingStores ? <Skeleton className='h-7 w-12'/> : totalStores.toString()}
           icon={Building2}
           description="Jumlah total tenant aktif"
         />
         <StatCard
           title="Total Transaksi"
-          value={settingsData?.totalTransactions ? formatNumber(settingsData.totalTransactions) : '0'}
+          value={isLoadingStores ? <Skeleton className='h-7 w-20'/> : formatNumber(totalTransactions)}
           icon={Users}
           description="Transaksi di seluruh platform"
         />
         <StatCard
           title="Total Pendapatan"
-          value={settingsData?.totalRevenue ? formatCurrency(settingsData.totalRevenue) : 'Rp 0'}
+          value={isLoadingSettings ? <Skeleton className='h-7 w-28'/> : formatCurrency(settingsData?.totalRevenue ?? 0)}
           icon={Banknote}
           description="Pendapatan platform"
         />

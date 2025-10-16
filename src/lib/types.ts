@@ -1,4 +1,3 @@
-
 import { Timestamp } from "firebase/firestore";
 
 export type Store = {
@@ -6,6 +5,7 @@ export type Store = {
   name: string;
   isActive: boolean;
   pradanaTokenBalance: number;
+  totalTransactions: number;
   premiumCatalogSubscriptionExpiry?: Timestamp | Date | string | null;
   createdAt: Timestamp | Date | string;
   // These fields will now be populated from the UserProfile
