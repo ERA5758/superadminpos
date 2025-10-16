@@ -55,24 +55,7 @@ export default function SettingsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   
-  const [settings, setSettings] = useState<SettingsData>({
-    bankInfo: { bankName: "", accountHolder: "", accountNumber: "" },
-    feeSettings: { 
-        feePercentage: 0, 
-        minFeeRp: 0, 
-        maxFeeRp: 0,
-        aiUsageFee: 0, 
-        newStoreBonusTokens: 0, 
-        catalogMonthlyFee: 0, 
-        catalogSixMonthFee: 0, 
-        catalogYearlyFee: 0,
-        aiBusinessPlanFee: 0,
-        aiSessionDurationMinutes: 0,
-        aiSessionFee: 0,
-        tokenValueRp: 1, // Default to 1 to avoid division by zero
-     },
-    notificationSettings: { waDeviceId: "", waAdminGroup: "" }
-  });
+  const [settings, setSettings] = useState<SettingsData | null>(null);
   
   const [docIds, setDocIds] = useState<{[key: string]: string}>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -85,25 +68,40 @@ export default function SettingsPage() {
         const settingsRef = collection(firestore, "appsetting");
         const querySnapshot = await getDocs(settingsRef);
         
-        const newSettings: SettingsData = JSON.parse(JSON.stringify(settings)); // Deep copy
+        const fetchedSettings: { [key: string]: any } = {};
         const newDocIds: {[key: string]: string} = {};
 
         querySnapshot.forEach((doc) => {
           const data = doc.data();
-          const key = data.settingKey;
-          const value = data.settingValue;
-          newDocIds[key] = doc.id;
-
-          if (Object.prototype.hasOwnProperty.call(newSettings.bankInfo, key)) {
-              (newSettings.bankInfo as any)[key] = value;
-          } else if (Object.prototype.hasOwnProperty.call(newSettings.feeSettings, key)) {
-              (newSettings.feeSettings as any)[key] = Number(value);
-          } else if (Object.prototype.hasOwnProperty.call(newSettings.notificationSettings, key)) {
-              (newSettings.notificationSettings as any)[key] = value;
-          }
+          fetchedSettings[data.settingKey] = data.settingValue;
+          newDocIds[data.settingKey] = doc.id;
         });
         
-        setSettings(newSettings);
+        setSettings({
+            bankInfo: {
+                bankName: fetchedSettings.bankName || "",
+                accountHolder: fetchedSettings.accountHolder || "",
+                accountNumber: fetchedSettings.accountNumber || "",
+            },
+            feeSettings: {
+                feePercentage: Number(fetchedSettings.feePercentage) || 0,
+                minFeeRp: Number(fetchedSettings.minFeeRp) || 0,
+                maxFeeRp: Number(fetchedSettings.maxFeeRp) || 0,
+                aiUsageFee: Number(fetchedSettings.aiUsageFee) || 0,
+                newStoreBonusTokens: Number(fetchedSettings.newStoreBonusTokens) || 0,
+                catalogMonthlyFee: Number(fetchedSettings.catalogMonthlyFee) || 0,
+                catalogSixMonthFee: Number(fetchedSettings.catalogSixMonthFee) || 0,
+                catalogYearlyFee: Number(fetchedSettings.catalogYearlyFee) || 0,
+                aiBusinessPlanFee: Number(fetchedSettings.aiBusinessPlanFee) || 0,
+                aiSessionDurationMinutes: Number(fetchedSettings.aiSessionDurationMinutes) || 0,
+                aiSessionFee: Number(fetchedSettings.aiSessionFee) || 0,
+                tokenValueRp: Number(fetchedSettings.tokenValueRp) || 1,
+            },
+            notificationSettings: {
+                waDeviceId: fetchedSettings.waDeviceId || "",
+                waAdminGroup: fetchedSettings.waAdminGroup || "",
+            }
+        });
         setDocIds(newDocIds);
 
       } catch (error) {
@@ -125,21 +123,24 @@ export default function SettingsPage() {
     category: T,
     key: keyof SettingsData[T]
   ) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!settings) return;
     const { value } = e.target;
     let processedValue: string | number = value;
 
-    // Check if the key belongs to feeSettings to process as a number
     if (category === 'feeSettings') {
         processedValue = value === '' ? 0 : Number(value);
     }
   
-    setSettings(prev => ({
-        ...prev,
-        [category]: {
-            ...prev[category],
-            [key]: processedValue
-        }
-    }));
+    setSettings(prev => {
+        if (!prev) return null;
+        return {
+            ...prev,
+            [category]: {
+                ...prev[category],
+                [key]: processedValue
+            }
+        };
+    });
   };
 
   const handleSave = async (settingsToSave: Record<string, any>) => {
@@ -149,14 +150,16 @@ export default function SettingsPage() {
          const docId = docIds[key];
          if (docId) {
              const docRef = doc(firestore, "appsetting", docId);
-             return updateDocumentNonBlocking(docRef, { settingValue: String(value) });
+             // For percentage, divide by 100 before saving if needed
+             const valueToSave = key === 'feePercentage' ? String(Number(value) / 100) : String(value);
+             return updateDocumentNonBlocking(docRef, { settingValue: valueToSave });
          }
          console.warn(`No document ID found for setting key: ${key}`);
          return Promise.resolve();
      });
 
      try {
-        await Promise.all(updates);
+        await Promise.all(updates.filter(p => p !== null));
         toast({
             title: "Pengaturan Disimpan",
             description: "Perubahan Anda telah berhasil disimpan.",
@@ -166,6 +169,61 @@ export default function SettingsPage() {
      }
   };
 
+  const handleSaveFeePercentage = () => {
+    if (!firestore || !settings) return;
+    const docId = docIds['feePercentage'];
+    if (docId) {
+        const docRef = doc(firestore, "appsetting", docId);
+        updateDocumentNonBlocking(docRef, { settingValue: String(settings.feeSettings.feePercentage) });
+    }
+    // create a new object with other fee settings
+    const otherFeeSettings = { ...settings.feeSettings };
+    delete otherFeeSettings.feePercentage;
+    handleSave(otherFeeSettings);
+  };
+
+  if (isLoading || !settings) {
+    return (
+        <div className="grid gap-6 max-w-4xl mx-auto">
+            <Card>
+                <CardHeader>
+                    <CardTitle className="font-headline">Biaya Platform & Langganan</CardTitle>
+                    <CardDescription>Kelola biaya transaksi, AI, dan langganan untuk platform.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <SettingsSkeleton count={12} />
+                </CardContent>
+                <CardFooter className="border-t px-6 py-4">
+                    <Button disabled>Simpan Perubahan</Button>
+                </CardFooter>
+            </Card>
+             <Card>
+                <CardHeader>
+                    <CardTitle className="font-headline">Informasi Rekening Bank</CardTitle>
+                    <CardDescription>Akun ini akan ditampilkan kepada toko untuk tujuan top-up.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <SettingsSkeleton count={3} />
+                </CardContent>
+                <CardFooter className="border-t px-6 py-4">
+                    <Button disabled>Simpan Perubahan</Button>
+                </CardFooter>
+            </Card>
+             <Card>
+                <CardHeader>
+                    <CardTitle className="font-headline">Konfigurasi Notifikasi</CardTitle>
+                    <CardDescription>Kelola konfigurasi untuk notifikasi, mis. WhatsApp.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <SettingsSkeleton count={2} />
+                </CardContent>
+                <CardFooter className="border-t px-6 py-4">
+                    <Button disabled>Simpan Perubahan</Button>
+                </CardFooter>
+            </Card>
+        </div>
+    )
+  }
 
   return (
     <div className="grid gap-6 max-w-4xl mx-auto">
@@ -177,11 +235,10 @@ export default function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading ? <SettingsSkeleton count={6} /> : (
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div className="space-y-2">
                     <Label htmlFor="feePercentage">Persentase Biaya (%)</Label>
-                    <Input id="feePercentage" type="number" value={settings.feeSettings.feePercentage * 100} onChange={e => setSettings(p => ({...p, feeSettings: {...p.feeSettings, feePercentage: parseFloat(e.target.value)/100 || 0}}))} />
+                    <Input id="feePercentage" type="number" value={settings.feeSettings.feePercentage * 100} onChange={e => setSettings(p => (p ? {...p, feeSettings: {...p.feeSettings, feePercentage: parseFloat(e.target.value)/100 || 0}} : null))} />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="minFeeRp">Biaya Minimum (Rp)</Label>
@@ -228,10 +285,9 @@ export default function SettingsPage() {
                     <Input id="catalogYearlyFee" type="number" value={settings.feeSettings.catalogYearlyFee} onChange={handleInputChange('feeSettings', 'catalogYearlyFee')} />
                 </div>
             </div>
-          )}
         </CardContent>
         <CardFooter className="border-t px-6 py-4">
-          <Button onClick={() => handleSave(settings.feeSettings)} disabled={isLoading}>Simpan Perubahan</Button>
+          <Button onClick={handleSaveFeePercentage}>Simpan Perubahan</Button>
         </CardFooter>
       </Card>
 
@@ -243,7 +299,6 @@ export default function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading ? <SettingsSkeleton count={3} /> : (
             <div className="space-y-4 max-w-md">
               <div className="space-y-2">
                 <Label htmlFor="bankName">Nama Bank</Label>
@@ -258,10 +313,9 @@ export default function SettingsPage() {
                 <Input id="accountNumber" value={settings.bankInfo.accountNumber} onChange={handleInputChange('bankInfo', 'accountNumber')} />
               </div>
             </div>
-          )}
         </CardContent>
         <CardFooter className="border-t px-6 py-4">
-          <Button onClick={() => handleSave(settings.bankInfo)} disabled={isLoading}>Simpan Perubahan</Button>
+          <Button onClick={() => handleSave(settings.bankInfo)}>Simpan Perubahan</Button>
         </CardFooter>
       </Card>
       
@@ -273,7 +327,6 @@ export default function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading ? <SettingsSkeleton count={2} /> : (
             <div className="space-y-4 max-w-md">
                 <div className="space-y-2">
                 <Label htmlFor="waDeviceId">Device ID WhatsApp</Label>
@@ -284,10 +337,9 @@ export default function SettingsPage() {
                 <Input id="waAdminGroup" value={settings.notificationSettings.waAdminGroup} onChange={handleInputChange('notificationSettings', 'waAdminGroup')} />
                 </div>
             </div>
-          )}
         </CardContent>
         <CardFooter className="border-t px-6 py-4">
-          <Button onClick={() => handleSave(settings.notificationSettings)} disabled={isLoading}>Simpan Perubahan</Button>
+          <Button onClick={() => handleSave(settings.notificationSettings)}>Simpan Perubahan</Button>
         </CardFooter>
       </Card>
     </div>
@@ -297,16 +349,18 @@ export default function SettingsPage() {
 
 function SettingsSkeleton({ count = 3 }: { count?: number }) {
     return (
-        <div className="space-y-6">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {Array.from({ length: count }).map((_, index) => (
                 <div key={index} className="space-y-2">
-                    <Skeleton className="h-4 w-1/4" />
+                    <Skeleton className="h-4 w-1/3" />
                     <Skeleton className="h-10 w-full" />
                 </div>
             ))}
         </div>
     )
 }
+    
+
     
 
     
