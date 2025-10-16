@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Coins, LayoutDashboard, Settings, Store as StoreIcon } from "lucide-react";
+import { Coins, LayoutDashboard, Settings, Store as StoreIcon, TicketPercent } from "lucide-react";
 import {
   SidebarMenu,
   SidebarMenuItem,
@@ -14,6 +14,7 @@ const navItems = [
   { href: "/dashboard", icon: <LayoutDashboard />, label: "Dashboard" },
   { href: "/top-up-requests", icon: <Coins />, label: "Verifikasi Top-Up" },
   { href: "/stores", icon: <StoreIcon />, label: "Manajemen Toko" },
+  { href: "/referral-codes", icon: <TicketPercent />, label: "Kode Referral" },
   { href: "/settings", icon: <Settings />, label: "Pengaturan" },
 ];
 

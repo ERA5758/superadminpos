@@ -55,3 +55,10 @@ export type PlatformOverview = {
     growthChartData: string; // JSON string
     lastUpdated: Timestamp | Date | string;
 }
+
+export type ReferralCode = {
+  id: string;
+  salesPersonName: string;
+  isActive: boolean;
+  createdAt: Timestamp | Date | string;
+};

@@ -12,6 +12,7 @@ const getPageTitle = (pathname: string) => {
   if (normalizedPath.startsWith('/dashboard')) return 'Dashboard Platform';
   if (normalizedPath.startsWith('/top-up-requests')) return 'Manajemen Verifikasi Top-Up';
   if (normalizedPath.startsWith('/stores')) return 'Manajemen Toko (Tenant)';
+  if (normalizedPath.startsWith('/referral-codes')) return 'Manajemen Kode Referral';
   if (normalizedPath.startsWith('/settings')) return 'Pengaturan Global Platform';
   return 'Konsol Admin Chika';
 };
