@@ -28,11 +28,16 @@ type BankInfo = {
 type FeeSettings = {
     feePercentage: number;
     minFeeRp: number;
+    maxFeeRp: number;
     aiUsageFee: number;
     newStoreBonusTokens: number;
     catalogMonthlyFee: number;
     catalogSixMonthFee: number;
     catalogYearlyFee: number;
+    aiBusinessPlanFee: number;
+    aiSessionDurationMinutes: number;
+    aiSessionFee: number;
+    tokenValueRp: number;
 };
 
 type NotificationSettings = {
@@ -52,7 +57,20 @@ export default function SettingsPage() {
   
   const [settings, setSettings] = useState<SettingsData>({
     bankInfo: { bankName: "", accountHolder: "", accountNumber: "" },
-    feeSettings: { feePercentage: 0, minFeeRp: 0, aiUsageFee: 0, newStoreBonusTokens: 0, catalogMonthlyFee: 0, catalogSixMonthFee: 0, catalogYearlyFee: 0 },
+    feeSettings: { 
+        feePercentage: 0, 
+        minFeeRp: 0, 
+        maxFeeRp: 0,
+        aiUsageFee: 0, 
+        newStoreBonusTokens: 0, 
+        catalogMonthlyFee: 0, 
+        catalogSixMonthFee: 0, 
+        catalogYearlyFee: 0,
+        aiBusinessPlanFee: 0,
+        aiSessionDurationMinutes: 0,
+        aiSessionFee: 0,
+        tokenValueRp: 1, // Default to 1 to avoid division by zero
+     },
     notificationSettings: { waDeviceId: "", waAdminGroup: "" }
   });
   
@@ -67,11 +85,7 @@ export default function SettingsPage() {
         const settingsRef = collection(firestore, "appsetting");
         const querySnapshot = await getDocs(settingsRef);
         
-        const newSettings: SettingsData = {
-            bankInfo: { ...settings.bankInfo },
-            feeSettings: { ...settings.feeSettings },
-            notificationSettings: { ...settings.notificationSettings }
-        };
+        const newSettings: SettingsData = JSON.parse(JSON.stringify(settings)); // Deep copy
         const newDocIds: {[key: string]: string} = {};
 
         querySnapshot.forEach((doc) => {
@@ -80,11 +94,11 @@ export default function SettingsPage() {
           const value = data.settingValue;
           newDocIds[key] = doc.id;
 
-          if (key in newSettings.bankInfo) {
+          if (Object.prototype.hasOwnProperty.call(newSettings.bankInfo, key)) {
               (newSettings.bankInfo as any)[key] = value;
-          } else if (key in newSettings.feeSettings) {
+          } else if (Object.prototype.hasOwnProperty.call(newSettings.feeSettings, key)) {
               (newSettings.feeSettings as any)[key] = Number(value);
-          } else if (key in newSettings.notificationSettings) {
+          } else if (Object.prototype.hasOwnProperty.call(newSettings.notificationSettings, key)) {
               (newSettings.notificationSettings as any)[key] = value;
           }
         });
@@ -111,9 +125,11 @@ export default function SettingsPage() {
     category: T,
     key: keyof SettingsData[T]
   ) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { value, type } = e.target;
+    const { value } = e.target;
     let processedValue: string | number = value;
-    if (type === 'number') {
+
+    // Check if the key belongs to feeSettings to process as a number
+    if (category === 'feeSettings') {
         processedValue = value === '' ? 0 : Number(value);
     }
   
@@ -126,18 +142,6 @@ export default function SettingsPage() {
     }));
   };
 
-  const handleFeePercentageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    const numericValue = value === '' ? 0 : parseFloat(value);
-     setSettings(prev => ({
-        ...prev,
-        feeSettings: {
-            ...prev.feeSettings,
-            feePercentage: isNaN(numericValue) ? 0 : numericValue / 100
-        }
-    }));
-  };
-
   const handleSave = async (settingsToSave: Record<string, any>) => {
      if (!firestore) return;
      
@@ -145,10 +149,10 @@ export default function SettingsPage() {
          const docId = docIds[key];
          if (docId) {
              const docRef = doc(firestore, "appsetting", docId);
-             // Ensure value is a string for Firestore, as per original schema
              return updateDocumentNonBlocking(docRef, { settingValue: String(value) });
          }
-         return Promise.resolve(); // Should not happen if docIds are correct
+         console.warn(`No document ID found for setting key: ${key}`);
+         return Promise.resolve();
      });
 
      try {
@@ -164,7 +168,7 @@ export default function SettingsPage() {
 
 
   return (
-    <div className="grid gap-6 max-w-2xl mx-auto">
+    <div className="grid gap-6 max-w-4xl mx-auto">
       <Card>
         <CardHeader>
           <CardTitle className="font-headline">Biaya Platform & Langganan</CardTitle>
@@ -173,39 +177,55 @@ export default function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading ? <SettingsSkeleton /> : (
-            <div className="space-y-4">
-                <div className="grid sm:grid-cols-2 gap-4">
+          {isLoading ? <SettingsSkeleton count={6} /> : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div className="space-y-2">
                     <Label htmlFor="feePercentage">Persentase Biaya (%)</Label>
-                    <Input id="feePercentage" type="number" value={settings.feeSettings.feePercentage * 100} onChange={handleFeePercentageChange} />
+                    <Input id="feePercentage" type="number" value={settings.feeSettings.feePercentage * 100} onChange={e => setSettings(p => ({...p, feeSettings: {...p.feeSettings, feePercentage: parseFloat(e.target.value)/100}}))} />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="minFeeRp">Biaya Minimum (Rp)</Label>
                     <Input id="minFeeRp" type="number" value={settings.feeSettings.minFeeRp} onChange={handleInputChange('feeSettings', 'minFeeRp')} />
                 </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="maxFeeRp">Biaya Maksimum (Rp)</Label>
+                    <Input id="maxFeeRp" type="number" value={settings.feeSettings.maxFeeRp} onChange={handleInputChange('feeSettings', 'maxFeeRp')} />
                 </div>
                 <div className="space-y-2">
-                <Label htmlFor="aiUsageFee">Biaya Penggunaan AI (per request)</Label>
-                <Input id="aiUsageFee" type="number" value={settings.feeSettings.aiUsageFee} onChange={handleInputChange('feeSettings', 'aiUsageFee')} />
+                    <Label htmlFor="newStoreBonusTokens">Bonus Token Toko Baru</Label>
+                    <Input id="newStoreBonusTokens" type="number" value={settings.feeSettings.newStoreBonusTokens} onChange={handleInputChange('feeSettings', 'newStoreBonusTokens')} />
                 </div>
                 <div className="space-y-2">
-                <Label htmlFor="newStoreBonusTokens">Bonus Token Toko Baru</Label>
-                <Input id="newStoreBonusTokens" type="number" value={settings.feeSettings.newStoreBonusTokens} onChange={handleInputChange('feeSettings', 'newStoreBonusTokens')} />
+                    <Label htmlFor="tokenValueRp">Nilai 1 Token (Rp)</Label>
+                    <Input id="tokenValueRp" type="number" value={settings.feeSettings.tokenValueRp} onChange={handleInputChange('feeSettings', 'tokenValueRp')} />
                 </div>
-                <div className="grid sm:grid-cols-3 gap-4">
+                 <div className="space-y-2">
+                    <Label htmlFor="aiUsageFee">Biaya AI (per token)</Label>
+                    <Input id="aiUsageFee" type="number" value={settings.feeSettings.aiUsageFee} onChange={handleInputChange('feeSettings', 'aiUsageFee')} />
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="aiBusinessPlanFee">Biaya AI Business Plan (token)</Label>
+                    <Input id="aiBusinessPlanFee" type="number" value={settings.feeSettings.aiBusinessPlanFee} onChange={handleInputChange('feeSettings', 'aiBusinessPlanFee')} />
+                </div>
                 <div className="space-y-2">
-                    <Label htmlFor="catalogMonthlyFee">Langganan 1 Bulan (Rp)</Label>
+                    <Label htmlFor="aiSessionFee">Biaya Sesi AI (token)</Label>
+                    <Input id="aiSessionFee" type="number" value={settings.feeSettings.aiSessionFee} onChange={handleInputChange('feeSettings', 'aiSessionFee')} />
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="aiSessionDurationMinutes">Durasi Sesi AI (menit)</Label>
+                    <Input id="aiSessionDurationMinutes" type="number" value={settings.feeSettings.aiSessionDurationMinutes} onChange={handleInputChange('feeSettings', 'aiSessionDurationMinutes')} />
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="catalogMonthlyFee">Langganan 1 Bulan (token)</Label>
                     <Input id="catalogMonthlyFee" type="number" value={settings.feeSettings.catalogMonthlyFee} onChange={handleInputChange('feeSettings', 'catalogMonthlyFee')} />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="catalogSixMonthFee">Langganan 6 Bulan (Rp)</Label>
+                    <Label htmlFor="catalogSixMonthFee">Langganan 6 Bulan (token)</Label>
                     <Input id="catalogSixMonthFee" type="number" value={settings.feeSettings.catalogSixMonthFee} onChange={handleInputChange('feeSettings', 'catalogSixMonthFee')} />
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="catalogYearlyFee">Langganan 1 Tahun (Rp)</Label>
+                    <Label htmlFor="catalogYearlyFee">Langganan 1 Tahun (token)</Label>
                     <Input id="catalogYearlyFee" type="number" value={settings.feeSettings.catalogYearlyFee} onChange={handleInputChange('feeSettings', 'catalogYearlyFee')} />
-                </div>
                 </div>
             </div>
           )}
@@ -223,8 +243,8 @@ export default function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading ? <SettingsSkeleton /> : (
-            <div className="space-y-4">
+          {isLoading ? <SettingsSkeleton count={3} /> : (
+            <div className="space-y-4 max-w-md">
               <div className="space-y-2">
                 <Label htmlFor="bankName">Nama Bank</Label>
                 <Input id="bankName" value={settings.bankInfo.bankName} onChange={handleInputChange('bankInfo', 'bankName')} />
@@ -253,8 +273,8 @@ export default function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading ? <SettingsSkeleton /> : (
-            <div className="space-y-4">
+          {isLoading ? <SettingsSkeleton count={2} /> : (
+            <div className="space-y-4 max-w-md">
                 <div className="space-y-2">
                 <Label htmlFor="waDeviceId">Device ID WhatsApp</Label>
                 <Input id="waDeviceId" value={settings.notificationSettings.waDeviceId} onChange={handleInputChange('notificationSettings', 'waDeviceId')} />
@@ -275,24 +295,20 @@ export default function SettingsPage() {
 }
 
 
-function SettingsSkeleton() {
+function SettingsSkeleton({ count = 3 }: { count?: number }) {
     return (
-        <div className="space-y-4">
-            <div className="space-y-2">
-                <Skeleton className="h-4 w-1/4" />
-                <Skeleton className="h-10 w-full" />
-            </div>
-            <div className="space-y-2">
-                <Skeleton className="h-4 w-1/3" />
-                <Skeleton className="h-10 w-full" />
-            </div>
-            <div className="space-y-2">
-                <Skeleton className="h-4 w-1/2" />
-                <Skeleton className="h-10 w-full" />
-            </div>
+        <div className="space-y-6">
+            {Array.from({ length: count }).map((_, index) => (
+                <div key={index} className="space-y-2">
+                    <Skeleton className="h-4 w-1/4" />
+                    <Skeleton className="h-10 w-full" />
+                </div>
+            ))}
         </div>
     )
 }
+    
+
     
 
     
