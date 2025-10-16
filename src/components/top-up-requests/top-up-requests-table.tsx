@@ -14,13 +14,14 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, XCircle } from "lucide-react";
+import { CheckCircle2, XCircle, Link as LinkIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useFirestore } from "@/firebase";
 import { doc, increment, writeBatch, Timestamp, collection, addDoc } from "firebase/firestore";
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
+import Link from 'next/link';
 
 export function TopUpRequestsTable({ requests }: { requests: TopUpRequest[] }) {
     const { toast } = useToast();
@@ -107,6 +108,7 @@ export function TopUpRequestsTable({ requests }: { requests: TopUpRequest[] }) {
               <TableHead>Nama Toko</TableHead>
               <TableHead>Jumlah</TableHead>
               <TableHead>Tgl. Permintaan</TableHead>
+              <TableHead>Bukti Transfer</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Aksi</TableHead>
             </TableRow>
@@ -119,6 +121,18 @@ export function TopUpRequestsTable({ requests }: { requests: TopUpRequest[] }) {
                   {formatNumber(request.amount)}
                 </TableCell>
                 <TableCell>{formatDate(request.requestDate)}</TableCell>
+                 <TableCell>
+                  {request.proofOfPaymentUrl ? (
+                    <Button variant="link" asChild className="h-auto p-0 text-xs">
+                        <Link href={request.proofOfPaymentUrl} target="_blank" rel="noopener noreferrer">
+                            <LinkIcon className="mr-1 h-3 w-3" />
+                            Lihat Bukti
+                        </Link>
+                    </Button>
+                  ) : (
+                    <span className="text-muted-foreground text-xs">-</span>
+                  )}
+                </TableCell>
                 <TableCell>
                   <Badge
                     variant={
@@ -163,5 +177,3 @@ export function TopUpRequestsTable({ requests }: { requests: TopUpRequest[] }) {
     </Card>
   );
 }
-
-    

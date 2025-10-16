@@ -116,6 +116,10 @@
         "notes": {
           "type": "string",
           "description": "Additional notes or comments regarding the request."
+        },
+        "proofOfPaymentUrl": {
+          "type": "string",
+          "description": "URL to the uploaded proof of payment image."
         }
       },
       "required": [

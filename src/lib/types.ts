@@ -35,6 +35,7 @@ export type TopUpRequest = {
   status: 'pending' | 'disetujui' | 'ditolak';
   approvalDate?: Timestamp | Date | string;
   approvedBy?: string;
+  proofOfPaymentUrl?: string;
 };
 
 export type Transaction = {
