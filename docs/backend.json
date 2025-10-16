@@ -95,7 +95,7 @@
           "type": "number",
           "description": "Amount of Pradana Tokens requested."
         },
-        "requestDate": {
+        "requestedAt": {
           "type": "string",
           "description": "Date and time when the request was submitted.",
           "format": "date-time"
@@ -117,7 +117,7 @@
           "type": "string",
           "description": "Additional notes or comments regarding the request."
         },
-        "proofOfPaymentUrl": {
+        "proofUrl": {
           "type": "string",
           "description": "URL to the uploaded proof of payment image."
         }
@@ -126,7 +126,7 @@
         "id",
         "storeId",
         "amount",
-        "requestDate",
+        "requestedAt",
         "status"
       ]
     },
@@ -187,12 +187,17 @@
         "referralCode": {
             "type": "string",
             "description": "The referral code used to register this store."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
         }
       },
       "required": [
         "id",
         "name",
-        "pradanaTokenBalance"
+        "pradanaTokenBalance",
+        "createdAt"
       ]
     },
     "UserProfile": {
@@ -439,3 +444,5 @@
     "reasoning": "The Firestore structure is designed to provide a secure, scalable, and easily maintainable data model for the Chika POS F&B Admin Console. It emphasizes authorization independence through data denormalization to avoid complex `get()` calls in security rules and enable atomic operations. Structural segregation ensures that each collection has a homogeneous security posture, simplifying rule definitions. The structure facilitates simple, robust, and easily debuggable security rules.\n\nKey aspects of the design include:\n\n*   **Authorization Independence (Denormalization):** The `Store` documents store the `catalogSubscriptionExpiry`. This avoids needing to read a separate subscription document to determine access rights.\n*   **Structural Segregation:** Each collection is dedicated to a specific entity and access pattern, ensuring homogeneous security requirements within each collection. The `users` collection now holds store profile information, separating it from operational store data.\n*   **QAPs (Rules are not Filters):** The structure allows for secure list operations by ensuring that listing collections does not expose data that the user is not authorized to access. For example, the `platform_overviews` collection is only accessible to superadmins.\n*   **DBAC (No Custom Claims):** Authorization relies solely on `request.auth.uid`. Admin status can be checked via the existence of their `uid` in the `/roles_admin` collection, which can be used in rules to grant access to sensitive data."
   }
 }
+
+    

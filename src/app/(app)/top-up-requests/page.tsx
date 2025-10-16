@@ -22,7 +22,7 @@ export default function TopUpRequestsPage() {
     return query(
         collection(firestore, 'topUpRequests'), 
         where('status', '==', activeTab)
-        // orderBy('requestDate', 'desc') -> This causes an error without a composite index
+        // orderBy('requestedAt', 'desc') -> This causes an error without a composite index
     );
   }, [firestore, activeTab]);
 
@@ -77,3 +77,5 @@ export default function TopUpRequestsPage() {
     </Tabs>
   );
 }
+
+    

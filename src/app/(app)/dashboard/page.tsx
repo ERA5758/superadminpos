@@ -251,7 +251,7 @@ export default function DashboardPage() {
                                 <TableRow key={req.id}>
                                     <TableCell className='font-medium'>{req.storeName}</TableCell>
                                     <TableCell>{formatCurrency(req.amount)}</TableCell>
-                                    <TableCell className='text-right text-xs'>{formatDate(req.requestDate)}</TableCell>
+                                    <TableCell className='text-right text-xs'>{formatDate(req.requestedAt)}</TableCell>
                                 </TableRow>
                             ))
                         ) : (
@@ -321,5 +321,7 @@ function TableSkeleton({ rows = 5, cols = 2}: {rows?: number, cols?: number}) {
         </div>
     )
 }
+
+    
 
     

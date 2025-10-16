@@ -31,11 +31,11 @@ export type TopUpRequest = {
   storeId: string;
   storeName:string;
   amount: number;
-  requestDate: Timestamp | Date | string;
+  requestedAt: Timestamp | Date | string;
   status: 'pending' | 'disetujui' | 'ditolak';
   approvalDate?: Timestamp | Date | string;
   approvedBy?: string;
-  proofOfPaymentUrl?: string;
+  proofUrl?: string;
 };
 
 export type Transaction = {
@@ -63,3 +63,5 @@ export type ReferralCode = {
   isActive: boolean;
   createdAt: Timestamp | Date | string;
 };
+
+    

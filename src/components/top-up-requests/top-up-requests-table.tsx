@@ -120,11 +120,11 @@ export function TopUpRequestsTable({ requests }: { requests: TopUpRequest[] }) {
                 <TableCell>
                   {formatNumber(request.amount)}
                 </TableCell>
-                <TableCell>{formatDate(request.requestDate)}</TableCell>
+                <TableCell>{formatDate(request.requestedAt)}</TableCell>
                  <TableCell>
-                  {request.proofOfPaymentUrl ? (
+                  {request.proofUrl ? (
                     <Button variant="link" asChild className="h-auto p-0 text-xs">
-                        <Link href={request.proofOfPaymentUrl} target="_blank" rel="noopener noreferrer">
+                        <Link href={request.proofUrl} target="_blank" rel="noopener noreferrer">
                             <LinkIcon className="mr-1 h-3 w-3" />
                             Lihat Bukti
                         </Link>
@@ -177,3 +177,5 @@ export function TopUpRequestsTable({ requests }: { requests: TopUpRequest[] }) {
     </Card>
   );
 }
+
+    
