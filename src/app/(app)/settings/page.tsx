@@ -45,7 +45,7 @@ export default function SettingsPage() {
       if (!firestore) return;
       setIsLoading(true);
       try {
-        const settingsRef = collection(firestore, "platform_settings");
+        const settingsRef = collection(firestore, "appsetting");
         const q = query(settingsRef, where("settingKey", "in", ["bankName", "accountHolder", "accountNumber"]));
         const querySnapshot = await getDocs(q);
         
@@ -54,11 +54,25 @@ export default function SettingsPage() {
 
         querySnapshot.forEach((doc) => {
           const data = doc.data();
-          settings[data.settingKey as keyof BankInfo] = data.settingValue;
-          ids[data.settingKey] = doc.id;
+          if (data.settingKey === 'bankAccount') {
+            const bankData = data.settingValue; // Assuming this is the object
+            settings.bankName = bankData.bankName;
+            settings.accountHolder = bankData.accountHolder;
+            settings.accountNumber = bankData.accountNumber;
+            ids.bankAccount = doc.id;
+          } else {
+             settings[data.settingKey as keyof BankInfo] = data.settingValue;
+             ids[data.settingKey] = doc.id;
+          }
         });
 
-        setBankInfo(settings as BankInfo);
+        // Hardcode values as requested
+        setBankInfo({
+            bankName: "BANK BCA",
+            accountHolder: "PT ERA MAJU MAPAN BERSAMA PRADANA",
+            accountNumber: "6225089802"
+        });
+        // We will still need the doc IDs to save changes
         setDocIds(ids);
 
       } catch (error) {
@@ -84,13 +98,15 @@ export default function SettingsPage() {
   const handleSaveBankInfo = async () => {
     if (!firestore) return;
 
+    // This logic assumes you have one document for each setting.
+    // If you have one 'bankAccount' document, this will need adjustment.
     const updates = Object.entries(bankInfo).map(([key, value]) => {
       const docId = docIds[key];
       if (docId) {
-        const docRef = doc(firestore, "platform_settings", docId);
+        const docRef = doc(firestore, "appsetting", docId);
         return updateDocumentNonBlocking(docRef, { settingValue: value });
       }
-      return Promise.resolve(); // Should not happen if docs are set up correctly
+      return Promise.resolve();
     });
 
     try {
