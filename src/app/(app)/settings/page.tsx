@@ -14,9 +14,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useFirestore } from "@/firebase";
-import { collection, doc, getDocs, updateDoc } from "firebase/firestore";
+import { collection, doc, getDoc, updateDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
-import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Skeleton } from "@/components/ui/skeleton";
 
 type BankInfo = {
@@ -35,7 +34,7 @@ type FeeSettings = {
     catalogSixMonthFee: number;
     catalogYearlyFee: number;
     aiBusinessPlanFee: number;
-    aiSessionDurationMinutes: number;
+aiSessionDurationMinutes: number;
     aiSessionFee: number;
     tokenValueRp: number;
 };
@@ -68,7 +67,7 @@ const defaultSettings: SettingsData = {
         catalogSixMonthFee: 0,
         catalogYearlyFee: 0,
         aiBusinessPlanFee: 0,
-        aiSessionDurationMinutes: 0,
+aiSessionDurationMinutes: 0,
         aiSessionFee: 0,
         tokenValueRp: 1,
     },
@@ -83,56 +82,50 @@ export default function SettingsPage() {
   const { toast } = useToast();
   
   const [settings, setSettings] = useState<SettingsData | null>(null);
-  
-  const [docIds, setDocIds] = useState<{[key: string]: string}>({});
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function fetchSettings() {
       if (!firestore) return;
       setIsLoading(true);
-      try {
-        const settingsRef = collection(firestore, "appSettings");
-        const querySnapshot = await getDocs(settingsRef);
-        
-        const fetchedValues: { [key: string]: any } = {};
-        const newDocIds: {[key: string]: string} = {};
 
-        querySnapshot.forEach((doc) => {
-          const data = doc.data();
-          fetchedValues[data.settingKey] = data.settingValue;
-          newDocIds[data.settingKey] = doc.id;
-        });
+      try {
+        const settingsCollectionRef = collection(firestore, "appSettings");
+
+        const [
+            feesDocSnap,
+            bankDocSnap,
+            notifDocSnap
+        ] = await Promise.all([
+            getDoc(doc(settingsCollectionRef, 'transactionFees')),
+            getDoc(doc(settingsCollectionRef, 'bankAccount')),
+            getDoc(doc(settingsCollectionRef, 'whatsappConfig'))
+        ]);
         
-        // Merge fetched data with defaults to ensure all fields are present
+        const feeSettingsData = feesDocSnap.exists() ? feesDocSnap.data() : {};
+        const bankInfoData = bankDocSnap.exists() ? bankDocSnap.data() : {};
+        const notificationSettingsData = notifDocSnap.exists() ? notifDocSnap.data() : {};
+
+        // Merge fetched data with defaults to ensure all fields are present and have the correct type
         const newSettings: SettingsData = {
             bankInfo: {
-                bankName: fetchedValues.bankName || defaultSettings.bankInfo.bankName,
-                accountHolder: fetchedValues.accountHolder || defaultSettings.bankInfo.accountHolder,
-                accountNumber: fetchedValues.accountNumber || defaultSettings.bankInfo.accountNumber,
+                ...defaultSettings.bankInfo,
+                ...bankInfoData,
             },
             feeSettings: {
-                feePercentage: Number(fetchedValues.feePercentage) || defaultSettings.feeSettings.feePercentage,
-                minFeeRp: Number(fetchedValues.minFeeRp) || defaultSettings.feeSettings.minFeeRp,
-                maxFeeRp: Number(fetchedValues.maxFeeRp) || defaultSettings.feeSettings.maxFeeRp,
-                aiUsageFee: Number(fetchedValues.aiUsageFee) || defaultSettings.feeSettings.aiUsageFee,
-                newStoreBonusTokens: Number(fetchedValues.newStoreBonusTokens) || defaultSettings.feeSettings.newStoreBonusTokens,
-                catalogMonthlyFee: Number(fetchedValues.catalogMonthlyFee) || defaultSettings.feeSettings.catalogMonthlyFee,
-                catalogSixMonthFee: Number(fetchedValues.catalogSixMonthFee) || defaultSettings.feeSettings.catalogSixMonthFee,
-                catalogYearlyFee: Number(fetchedValues.catalogYearlyFee) || defaultSettings.feeSettings.catalogYearlyFee,
-                aiBusinessPlanFee: Number(fetchedValues.aiBusinessPlanFee) || defaultSettings.feeSettings.aiBusinessPlanFee,
-                aiSessionDurationMinutes: Number(fetchedValues.aiSessionDurationMinutes) || defaultSettings.feeSettings.aiSessionDurationMinutes,
-                aiSessionFee: Number(fetchedValues.aiSessionFee) || defaultSettings.feeSettings.aiSessionFee,
-                tokenValueRp: Number(fetchedValues.tokenValueRp) || defaultSettings.feeSettings.tokenValueRp,
+                ...defaultSettings.feeSettings,
+                ...Object.entries(feeSettingsData).reduce((acc, [key, value]) => {
+                    (acc as any)[key] = Number(value) || 0;
+                    return acc;
+                }, {}),
             },
             notificationSettings: {
-                waDeviceId: fetchedValues.waDeviceId || defaultSettings.notificationSettings.waDeviceId,
-                waAdminGroup: fetchedValues.waAdminGroup || defaultSettings.notificationSettings.waAdminGroup,
+                ...defaultSettings.notificationSettings,
+                ...notificationSettingsData,
             }
         };
 
         setSettings(newSettings);
-        setDocIds(newDocIds);
 
       } catch (error) {
         console.error("Error fetching settings: ", error);
@@ -157,10 +150,11 @@ export default function SettingsPage() {
     const { value } = e.target;
     let processedValue: string | number = value;
 
-    if (category === 'feeSettings') {
+    // For all numeric inputs, handle empty string and convert to number
+    if (typeof (settings[category] as any)[key] === 'number') {
         processedValue = value === '' ? 0 : Number(value);
         if (isNaN(processedValue)) {
-            processedValue = 0;
+            processedValue = 0; // Fallback to 0 if conversion results in NaN
         }
     }
   
@@ -176,29 +170,32 @@ export default function SettingsPage() {
     });
   };
 
-  const handleSave = async (settingsToSave: Record<string, any>) => {
-     if (!firestore) return;
+  const handleSave = async (category: keyof SettingsData, docId: string) => {
+     if (!firestore || !settings) return;
      
-     const updates = Object.entries(settingsToSave).map(([key, value]) => {
-         const docId = docIds[key];
-         if (docId) {
-             const docRef = doc(firestore, "appSettings", docId);
-             // For percentage, divide by 100 before saving if needed
-             const valueToSave = String(value);
-             return updateDocumentNonBlocking(docRef, { settingValue: valueToSave });
-         }
-         console.warn(`No document ID found for setting key: ${key}`);
-         return Promise.resolve();
-     });
+     const dataToSave = settings[category];
+
+     // Convert all values to string for Firestore, as per original logic if needed,
+     // or save as numbers. Saving as numbers is generally better.
+     const payload = Object.entries(dataToSave).reduce((acc, [key, value]) => {
+        (acc as any)[key] = value;
+        return acc;
+     }, {});
+
+     const docRef = doc(firestore, "appSettings", docId);
 
      try {
-        await Promise.all(updates.filter(p => p !== null));
+        await updateDoc(docRef, payload);
         toast({
             title: "Pengaturan Disimpan",
             description: "Perubahan Anda telah berhasil disimpan.",
         });
-     } catch (error) {
-         // Errors are handled by the non-blocking update function's catch block and emitter.
+     } catch (error: any) {
+        toast({
+            variant: "destructive",
+            title: "Gagal Menyimpan",
+            description: `Tidak dapat menyimpan perubahan: ${error.message}`,
+        });
      }
   };
 
@@ -259,7 +256,7 @@ export default function SettingsPage() {
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div className="space-y-2">
                     <Label htmlFor="feePercentage">Persentase Biaya (%)</Label>
-                    <Input id="feePercentage" type="number" value={settings.feeSettings.feePercentage * 100} onChange={e => setSettings(p => (p ? {...p, feeSettings: {...p.feeSettings, feePercentage: parseFloat(e.target.value)/100 || 0}} : null))} />
+                    <Input id="feePercentage" type="number" value={settings.feeSettings.feePercentage} onChange={handleInputChange('feeSettings', 'feePercentage')} />
                 </div>
                 <div className="space-y-2">
                     <Label htmlFor="minFeeRp">Biaya Minimum (Rp)</Label>
@@ -308,7 +305,7 @@ export default function SettingsPage() {
             </div>
         </CardContent>
         <CardFooter className="border-t px-6 py-4">
-          <Button onClick={() => handleSave(settings.feeSettings)}>Simpan Perubahan</Button>
+          <Button onClick={() => handleSave('feeSettings', 'transactionFees')}>Simpan Perubahan</Button>
         </CardFooter>
       </Card>
 
@@ -336,7 +333,7 @@ export default function SettingsPage() {
             </div>
         </CardContent>
         <CardFooter className="border-t px-6 py-4">
-          <Button onClick={() => handleSave(settings.bankInfo)}>Simpan Perubahan</Button>
+          <Button onClick={() => handleSave('bankInfo', 'bankAccount')}>Simpan Perubahan</Button>
         </CardFooter>
       </Card>
       
@@ -360,7 +357,7 @@ export default function SettingsPage() {
             </div>
         </CardContent>
         <CardFooter className="border-t px-6 py-4">
-          <Button onClick={() => handleSave(settings.notificationSettings)}>Simpan Perubahan</Button>
+          <Button onClick={() => handleSave('notificationSettings', 'whatsappConfig')}>Simpan Perubahan</Button>
         </CardFooter>
       </Card>
     </div>
@@ -380,3 +377,5 @@ function SettingsSkeleton({ count = 3 }: { count?: number }) {
         </div>
     )
 }
+
+    
