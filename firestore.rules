@@ -2,180 +2,203 @@
  * @fileoverview Firestore Security Rules for the Chika POS F&B Admin Console.
  *
  * Core Philosophy:
- * This ruleset enforces a role-based access control model, supplemented by
- * user-ownership where appropriate. Superadmins, identified by their UID in
- * the `/roles_admin` collection, have broad access to platform-level data and
- * store management. Store admins (users) primarily have access to their own
- * profile data.
+ * This ruleset enforces a role-based access control model, supplemented by ownership for user profiles. Superadmins, identified by their UID existing as a document ID in the `/roles_admin` collection, have broad access to platform-level data and administrative functions. Store admins (users) have ownership over their profile data.
  *
  * Data Structure:
- * - /platform_overviews/{platformOverviewId}: Platform-wide aggregated data,
- *   accessible only to superadmins.
- * - /top_up_requests/{topUpRequestId}: Top-up requests from stores, managed by
- *   superadmins.
- * - /stores/{storeId}: Store operational data, managed by superadmins.
- * - /users/{userId}: User profile data, accessible to the user themselves.
- * - /premium_catalog_subscriptions/{premiumCatalogSubscriptionId}: Premium
- *   catalog subscription details, managed by superadmins.
- * - /platform_settings/{platformSettingId}: Platform-wide settings, accessible
- *   only to superadmins.
- * - /roles_admin/{adminId}: Collection of admin UIDs. Existence of a document
- *   with a UID in this collection grants admin privileges.
+ * - /platform_overviews/{platformOverviewId}: Platform-wide aggregated data, accessible only to superadmins.
+ * - /top_up_requests/{topUpRequestId}: Top-up requests from stores, manageable by superadmins.
+ * - /stores/{storeId}: Operational data for stores, managed by superadmins.
+ * - /users/{userId}: Profile information for store admins (users), with owner-only access.
+ * - /premium_catalog_subscriptions/{premiumCatalogSubscriptionId}: Subscription details, managed by superadmins.
+ * - /platform_settings/{platformSettingId}: Platform-wide settings, accessible only to superadmins.
+ * - /roles_admin/{adminId}: Collection of admin UIDs; existence grants admin privileges.
  *
  * Key Security Decisions:
- * - Superadmin Role: Superadmin status is determined by the presence of a
- *   document in the `/roles_admin/{adminId}` collection, where the document ID
- *   is the user's UID.
- * - User Data Isolation: User data in `/users/{userId}` is strictly
- *   accessible only to the authenticated user.
- * - No User Listing: Listing of users is explicitly denied to prevent
- *   unauthorized data exposure.
+ * - Listing of users is explicitly denied to prevent unauthorized data access.
+ * - Superadmin privileges are determined by the existence of a document in `/roles_admin` with the user's UID as the document ID.
+ * - Data needed for authorization decisions is denormalized to avoid costly `get()` calls and enforce authorization independence.
  *
  * Denormalization for Authorization:
- * - Admin role is checked via the existence of a document in `/roles_admin/{adminId}`,
- *   avoiding complex queries.
+ * - No denormalization needed due to using `/roles_admin` collection to authorize superadmins.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Grants superadmins read and write access to platform overview data.
+     * @description Controls access to platform overview data.
      * @path /platform_overviews/{platformOverviewId}
-     * @allow (get, list) User with UID 'adminUid' in /roles_admin can read a platform overview.
-     * @allow (create, update, delete) User with UID 'adminUid' in /roles_admin can create, update, or delete a platform overview.
-     * @deny (get, list) User without UID in /roles_admin cannot read a platform overview.
-     * @deny (create, update, delete) User without UID in /roles_admin cannot create, update, or delete a platform overview.
-     * @principle Enforces role-based access control; only admins can manage platform overviews.
+     * @allow (get) User is an admin
+     * @deny (get) User is not an admin
+     * @allow (list) User is an admin
+     * @deny (list) User is not an admin
+     * @allow (create) if false;
+     * @allow (update) if false;
+     * @allow (delete) if false;
+     * @principle Restricts access to platform overviews to superadmins only.
      */
     match /platform_overviews/{platformOverviewId} {
       allow get: if isAdmin();
       allow list: if isAdmin();
-      allow create: if isAdmin();
-      allow update: if isAdmin() && resource != null;
-      allow delete: if isAdmin() && resource != null;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
     }
 
     /**
-     * @description Grants superadmins read and write access to top-up requests.
+     * @description Controls access to top-up requests from stores.
      * @path /top_up_requests/{topUpRequestId}
-     * @allow (get, list) User with UID 'adminUid' in /roles_admin can read a top-up request.
-     * @allow (create, update, delete) User with UID 'adminUid' in /roles_admin can create, update, or delete a top-up request.
-     * @deny (get, list) User without UID in /roles_admin cannot read a top-up request.
-     * @deny (create, update, delete) User without UID in /roles_admin cannot create, update, or delete a top-up request.
-     * @principle Enforces role-based access control; only admins can manage top-up requests.
+     * @allow (get) User is an admin
+     * @deny (get) User is not an admin
+     * @allow (list) User is an admin
+     * @deny (list) User is not an admin
+     * @allow (create) if false;
+     * @allow (update) User is an admin && resource != null;
+     * @allow (delete) User is an admin && resource != null;
+     * @principle Restricts management of top-up requests to superadmins only.
      */
     match /top_up_requests/{topUpRequestId} {
       allow get: if isAdmin();
       allow list: if isAdmin();
-      allow create: if isAdmin();
+      allow create: if false;
       allow update: if isAdmin() && resource != null;
       allow delete: if isAdmin() && resource != null;
     }
 
     /**
-     * @description Grants superadmins read and write access to store data.
+     * @description Controls access to store operational data.
      * @path /stores/{storeId}
-     * @allow (get, list) User with UID 'adminUid' in /roles_admin can read a store.
-     * @allow (create, update, delete) User with UID 'adminUid' in /roles_admin can create, update, or delete a store.
-     * @deny (get, list) User without UID in /roles_admin cannot read a store.
-     * @deny (create, update, delete) User without UID in /roles_admin cannot create, update, or delete a store.
-     * @principle Enforces role-based access control; only admins can manage store data.
+     * @allow (get) User is an admin
+     * @deny (get) User is not an admin
+     * @allow (list) User is an admin
+     * @deny (list) User is not an admin
+     * @allow (create) if false;
+     * @allow (update) User is an admin && resource != null;
+     * @allow (delete) User is an admin && resource != null;
+     * @principle Restricts management of store data to superadmins only.
      */
     match /stores/{storeId} {
       allow get: if isAdmin();
       allow list: if isAdmin();
-      allow create: if isAdmin();
+      allow create: if false;
       allow update: if isAdmin() && resource != null;
       allow delete: if isAdmin() && resource != null;
     }
 
     /**
-     * @description Grants a user read/write access to their own profile data.
+     * @description Controls access to user profile information.
      * @path /users/{userId}
-     * @allow (get) Authenticated user can read their own profile.
-     * @allow (create) Authenticated user can create their own profile (self-registration).
-     * @allow (update) Authenticated user can update their own profile.
-     * @allow (delete) Authenticated user can delete their own profile.
-     * @deny (get) Authenticated user cannot read another user's profile.
-     * @deny (create) Authenticated user cannot create a profile for another user.
-     * @deny (update) Authenticated user cannot update another user's profile.
-     * @deny (delete) Authenticated user cannot delete another user's profile.
-     * @principle Enforces user-ownership; users can only manage their own profiles.
+     * @allow (get) User is the profile owner
+     * @deny (get) User is not the profile owner
+     * @allow (list) if false;
+     * @deny (list) Listing is disabled for security.
+     * @allow (create) User ID must match auth UID.
+     * @allow (update) User is the profile owner and document exists, immutable check.
+     * @allow (delete) User is the profile owner and document exists.
+     * @principle Enforces document ownership for user profiles.
      */
     match /users/{userId} {
       allow get: if isOwner(userId);
       allow list: if false;
-      allow create: if isOwner(userId) && request.resource.data.email == request.auth.token.email;
-      allow update: if isOwner(userId) && resource != null && request.resource.data.email == resource.data.email;
-      allow delete: if isOwner(userId) && resource != null;
+      allow create: if isOwner(userId) && request.resource.data.email == request.auth.token.email && request.auth.uid == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.email == resource.data.email;
+      allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Grants superadmins read and write access to premium catalog subscriptions.
+     * @description Controls access to premium catalog subscription details.
      * @path /premium_catalog_subscriptions/{premiumCatalogSubscriptionId}
-     * @allow (get, list) User with UID 'adminUid' in /roles_admin can read a premium catalog subscription.
-     * @allow (create, update, delete) User with UID 'adminUid' in /roles_admin can create, update, or delete a premium catalog subscription.
-     * @deny (get, list) User without UID in /roles_admin cannot read a premium catalog subscription.
-     * @deny (create, update, delete) User without UID in /roles_admin cannot create, update, or delete a premium catalog subscription.
-     * @principle Enforces role-based access control; only admins can manage premium catalog subscriptions.
+     * @allow (get) User is an admin
+     * @deny (get) User is not an admin
+     * @allow (list) User is an admin
+     * @deny (list) User is not an admin
+     * @allow (create) if false;
+     * @allow (update) User is an admin && resource != null;
+     * @allow (delete) User is an admin && resource != null;
+     * @principle Restricts management of subscriptions to superadmins only.
      */
     match /premium_catalog_subscriptions/{premiumCatalogSubscriptionId} {
       allow get: if isAdmin();
       allow list: if isAdmin();
-      allow create: if isAdmin();
+      allow create: if false;
       allow update: if isAdmin() && resource != null;
       allow delete: if isAdmin() && resource != null;
     }
 
     /**
-     * @description Grants superadmins read and write access to platform settings.
+     * @description Controls access to platform-wide settings.
      * @path /platform_settings/{platformSettingId}
-     * @allow (get, list) User with UID 'adminUid' in /roles_admin can read a platform setting.
-     * @allow (create, update, delete) User with UID 'adminUid' in /roles_admin can create, update, or delete a platform setting.
-     * @deny (get, list) User without UID in /roles_admin cannot read a platform setting.
-     * @deny (create, update, delete) User without UID in /roles_admin cannot create, update, or delete a platform setting.
-     * @principle Enforces role-based access control; only admins can manage platform settings.
+     * @allow (get) User is an admin
+     * @deny (get) User is not an admin
+     * @allow (list) User is an admin
+     * @deny (list) User is not an admin
+     * @allow (create) if false;
+     * @allow (update) User is an admin && resource != null;
+     * @allow (delete) User is an admin && resource != null;
+     * @principle Restricts access to platform settings to superadmins only.
      */
     match /platform_settings/{platformSettingId} {
       allow get: if isAdmin();
       allow list: if isAdmin();
-      allow create: if isAdmin();
+      allow create: if false;
       allow update: if isAdmin() && resource != null;
       allow delete: if isAdmin() && resource != null;
     }
 
     /**
-     * @description Defines admin roles based on document existence; allows superadmins to manage admin roles.
+     * @description Controls access to admin role assignments.
      * @path /roles_admin/{adminId}
-     * @allow (get) User with UID 'adminId' can verify their own admin status.
-     * @allow (create) User with UID 'adminUid' in /roles_admin can grant admin privileges.
-     * @allow (update) User with UID 'adminUid' in /roles_admin can modify admin privileges.
-     * @allow (delete) User with UID 'adminUid' in /roles_admin can revoke admin privileges.
-     * @deny (get) Non-admin user cannot determine another user's admin status.
-     * @deny (create) Non-admin user cannot grant admin privileges.
-     * @deny (update) Non-admin user cannot modify admin privileges.
-     * @deny (delete) Non-admin user cannot revoke admin privileges.
-     * @principle Enforces role-based access control; manages superadmin roles.
+     * @allow (get) User is an admin
+     * @deny (get) User is not an admin
+     * @allow (list) if false;
+     * @deny (list) Public listing is disabled for security.
+     * @allow (create) User is an admin and the document ID is their UID.
+     * @allow (update) if false;
+     * @allow (delete) User is an admin and the document exists.
+     * @principle Manages admin role assignments based on UID document existence.
      */
     match /roles_admin/{adminId} {
       allow get: if isAdmin();
       allow list: if false;
-      allow create: if isAdmin();
-      allow update: if isAdmin() && resource != null;
+      allow create: if isAdmin() && request.auth.uid == adminId;
+      allow update: if false;
       allow delete: if isAdmin() && resource != null;
     }
 
+    // ---- Helper Functions ----
+
+    /**
+     * @description Checks if the user is signed in.
+     * @return {boolean} True if the user is signed in, false otherwise.
+     */
     function isSignedIn() {
       return request.auth != null;
     }
 
+    /**
+     * @description Checks if the user is the owner of the document.
+     * @param {string} userId The user ID to compare against the request's auth UID.
+     * @return {boolean} True if the user is the owner, false otherwise.
+     */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
+    /**
+     * @description Checks if the user is the owner of the document and the document exists.
+     * @param {string} userId The user ID to compare against the resource's data and the request's auth UID.
+     * @return {boolean} True if the user is the owner and the document exists, false otherwise.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * @description Checks if the user is an administrator based on the existence of their UID in the /roles_admin collection.
+     * @return {boolean} True if the user is an administrator, false otherwise.
+     */
     function isAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+      return exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
     }
   }
 }
