@@ -1,19 +1,23 @@
+
 "use client";
 
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { revenueData } from "@/lib/data";
 
-export function RevenueChart() {
+type RevenueChartProps = {
+  data: { month: string; revenue: number }[];
+};
+
+export function RevenueChart({ data }: RevenueChartProps) {
   return (
     <Card className="col-span-1 lg:col-span-2">
       <CardHeader>
-        <CardTitle className="font-headline">Pendapatan</CardTitle>
+        <CardTitle className="font-headline">Pertumbuhan Pendapatan</CardTitle>
         <CardDescription>Gambaran pendapatan bulanan selama setahun terakhir</CardDescription>
       </CardHeader>
       <CardContent className="pl-2">
         <ResponsiveContainer width="100%" height={350}>
-          <BarChart data={revenueData}>
+          <BarChart data={data}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
             <XAxis 
               dataKey="month" 
@@ -46,3 +50,5 @@ export function RevenueChart() {
     </Card>
   );
 }
+
+    
