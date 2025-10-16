@@ -25,11 +25,11 @@ export default function DashboardPage() {
   [firestore]);
   
   const topUpRequestsQuery = useMemoFirebase(() => 
-    firestore ? query(collection(firestore, 'top_up_requests'), where('status', '==', 'tertunda'), orderBy('requestDate', 'desc'), limit(5)) : null,
+    firestore ? query(collection(firestore, 'top_up_requests'), where('status', '==', 'tertunda'), limit(5)) : null,
   [firestore]);
 
   const recentStoresQuery = useMemoFirebase(() => 
-    firestore ? query(collection(firestore, 'stores'), orderBy('name', 'desc'), limit(5)) : null,
+    firestore ? query(collection(firestore, 'stores'), orderBy('createdAt', 'desc'), limit(5)) : null,
   [firestore]);
 
   const { data: overviewData, isLoading: isLoadingOverview } = useCollection<PlatformOverview>(platformOverviewQuery);
@@ -130,7 +130,7 @@ export default function DashboardPage() {
               {isLoadingTopUps ? <TableSkeleton rows={5} cols={3}/> : 
                topUpsError ? (
                   <div className="text-center text-muted-foreground py-10 text-sm">
-                    Gagal memuat permintaan. Mungkin perlu membuat indeks di Firestore.
+                    Gagal memuat permintaan. Anda mungkin perlu membuat indeks di Firebase Console.
                   </div>
                ) : (
                 <Table>
@@ -217,5 +217,3 @@ function TableSkeleton({ rows = 5, cols = 2}: {rows?: number, cols?: number}) {
         </div>
     )
 }
-
-    
