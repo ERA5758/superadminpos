@@ -44,6 +44,10 @@ export default function DashboardPage() {
     firestore ? query(collection(firestore, 'topUpRequests'), where('status', '==', 'pending'), limit(5)) : null,
   [firestore]);
 
+  const approvedTopUpsQuery = useMemoFirebase(() =>
+    firestore ? query(collection(firestore, 'topUpRequests'), where('status', '==', 'disetujui')) : null,
+  [firestore]);
+
   const recentStoresQuery = useMemoFirebase(() => 
     firestore ? query(collection(firestore, 'stores'), orderBy('name', 'desc'), limit(5)) : null,
   [firestore]);
@@ -52,6 +56,7 @@ export default function DashboardPage() {
   const { data: stores, isLoading: isLoadingStores } = useCollection<Store>(storesQuery);
   const { data: transactions, isLoading: isLoadingTransactions } = useCollection<Transaction>(transactionsQuery);
   const { data: pendingTopUps, isLoading: isLoadingTopUps, error: topUpsError } = useCollection<TopUpRequest>(topUpRequestsQuery);
+  const { data: approvedTopUps, isLoading: isLoadingApprovedTopUps } = useCollection<TopUpRequest>(approvedTopUpsQuery);
   const { data: recentStores, isLoading: isLoadingRecentStores } = useCollection<Store>(recentStoresQuery);
   
   // --- Client-side Aggregation ---
@@ -69,15 +74,16 @@ export default function DashboardPage() {
         .filter(t => t.type === 'pos' || t.type === 'ai')
         .reduce((acc, t) => acc + Math.abs(t.amount || 0), 0); // Use Math.abs for usage
       setTotalTransactions(calculatedTransactions);
-
-      // Calculate total revenue from top-ups
-      const calculatedRevenue = transactions
-        .filter(t => t.type === 'topup')
-        .reduce((acc, t) => acc + (t.amount || 0), 0);
-      setTotalRevenue(calculatedRevenue);
     }
   }, [transactions]);
   
+  useEffect(() => {
+    if (approvedTopUps) {
+        const calculatedRevenue = approvedTopUps.reduce((acc, req) => acc + (req.amount || 0), 0);
+        setTotalRevenue(calculatedRevenue);
+    }
+  }, [approvedTopUps]);
+
   const growthChartData = settingsData?.growthChartData ? JSON.parse(settingsData.growthChartData) : [];
   const totalStores = stores?.length ?? 0;
 
@@ -105,7 +111,7 @@ export default function DashboardPage() {
       }
   }
 
-  const isLoading = isLoadingTopUps || isLoadingRecentStores || isLoadingStores || isLoadingTransactions;
+  const isLoading = isLoadingTopUps || isLoadingRecentStores || isLoadingStores || isLoadingTransactions || isLoadingApprovedTopUps;
 
   // --- Render Skeletons ---
   if (isLoading && !pendingTopUps && !recentStores && !stores) {
@@ -151,7 +157,7 @@ export default function DashboardPage() {
         />
         <StatCard
           title="Total Pendapatan"
-          value={isLoadingTransactions ? <Skeleton className='h-7 w-28'/> : formatNumber(totalRevenue)}
+          value={isLoadingApprovedTopUps ? <Skeleton className='h-7 w-28'/> : formatNumber(totalRevenue)}
           icon={Banknote}
           description="Total dari semua top-up"
         />
