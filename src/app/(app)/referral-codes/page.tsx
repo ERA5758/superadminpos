@@ -8,9 +8,11 @@ import type { ReferralCode, Store, TopUpRequest } from "@/lib/types";
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ReferralCodeAnalytics, type AnalyticsData } from '@/components/referral-codes/referral-code-analytics';
 import { AddReferralCode } from '@/components/referral-codes/add-referral-code';
 import { getYear, getMonth } from 'date-fns';
+import { ReferralCodesTable, type AnalyticsData } from '@/components/referral-codes/referral-codes-table';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 export default function ReferralCodesPage() {
   const firestore = useFirestore();
@@ -21,6 +23,7 @@ export default function ReferralCodesPage() {
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData[]>([]);
+  const [anyError, setAnyError] = useState<Error | null>(null);
 
   // --- Data Fetching ---
   const codesQuery = useMemoFirebase(() => 
@@ -36,9 +39,15 @@ export default function ReferralCodesPage() {
   [firestore]);
 
   const { data: codes, isLoading: isLoadingCodes, error: codesError } = useCollection<ReferralCode>(codesQuery);
-  const { data: stores, isLoading: isLoadingStores } = useCollection<Store>(storesQuery);
-  const { data: topUps, isLoading: isLoadingTopUps } = useCollection<TopUpRequest>(topUpsQuery);
+  const { data: stores, isLoading: isLoadingStores, error: storesError } = useCollection<Store>(storesQuery);
+  const { data: topUps, isLoading: isLoadingTopUps, error: topUpsError } = useCollection<TopUpRequest>(topUpsQuery);
   
+  useEffect(() => {
+    if (codesError) setAnyError(codesError);
+    if (storesError) setAnyError(storesError);
+    if (topUpsError) setAnyError(topUpsError);
+  }, [codesError, storesError, topUpsError]);
+
   // --- Data Processing & Aggregation ---
   useEffect(() => {
     if (!codes || !stores || !topUps) return;
@@ -101,20 +110,29 @@ export default function ReferralCodesPage() {
 
   const isLoading = isLoadingCodes || isLoadingStores || isLoadingTopUps;
 
-  if (isLoading && analyticsData.length === 0 && !codesError) {
+  if (isLoading && analyticsData.length === 0 && !anyError) {
     return (
         <div className="space-y-4">
              <div className="flex justify-between items-center">
                 <Skeleton className="h-10 w-64" />
                 <Skeleton className="h-10 w-32" />
             </div>
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                <Skeleton className="h-48 w-full" />
-                <Skeleton className="h-48 w-full" />
-                <Skeleton className="h-48 w-full" />
-            </div>
+            <Skeleton className="h-48 w-full" />
         </div>
     );
+  }
+
+  if (anyError) {
+     return (
+        <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Gagal Memuat Data</AlertTitle>
+            <AlertDescription>
+                Tidak dapat mengambil data dari server. Pastikan Anda memiliki izin yang benar dan coba lagi.
+                <p className="mt-2 font-mono text-xs bg-muted p-2 rounded">{anyError.message}</p>
+            </AlertDescription>
+        </Alert>
+     )
   }
 
   return (
@@ -156,8 +174,7 @@ export default function ReferralCodesPage() {
             </CardContent>
         </Card>
       
-      <ReferralCodeAnalytics data={analyticsData} error={codesError} />
+      <ReferralCodesTable data={analyticsData} />
     </div>
   );
 }
-
