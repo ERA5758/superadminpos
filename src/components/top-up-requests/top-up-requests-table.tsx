@@ -114,13 +114,13 @@ export function TopUpRequestsTable({ requests }: { requests: TopUpRequest[] }) {
                     variant={
                       request.status === "disetujui"
                         ? "default"
-                        : request.status === "tertunda"
+                        : request.status === "pending"
                         ? "secondary"
                         : "destructive"
                     }
                     className={cn(
                         request.status === "disetujui" && "bg-emerald-500/10 text-emerald-700 border-emerald-500/20 hover:bg-emerald-500/20",
-                        request.status === "tertunda" && "bg-amber-500/10 text-amber-700 border-amber-500/20 hover:bg-amber-500/20",
+                        request.status === "pending" && "bg-amber-500/10 text-amber-700 border-amber-500/20 hover:bg-amber-500/20",
                         request.status === "ditolak" && "bg-red-500/10 text-red-700 border-red-500/20 hover:bg-red-500/20"
                     )}
                   >
@@ -128,7 +128,7 @@ export function TopUpRequestsTable({ requests }: { requests: TopUpRequest[] }) {
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
-                  {request.status === "tertunda" ? (
+                  {request.status === "pending" ? (
                     <div className="flex gap-2 justify-end">
                       <Button variant="outline" size="sm" className="text-emerald-600 border-emerald-600 hover:text-emerald-700 hover:bg-emerald-100" onClick={() => handleAction(request, 'disetujui')}>
                         <CheckCircle2 className="h-4 w-4 mr-2" />
@@ -153,5 +153,3 @@ export function TopUpRequestsTable({ requests }: { requests: TopUpRequest[] }) {
     </Card>
   );
 }
-
-    

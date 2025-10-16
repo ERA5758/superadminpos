@@ -25,7 +25,7 @@ export default function DashboardPage() {
   [firestore]);
   
   const topUpRequestsQuery = useMemoFirebase(() => 
-    firestore ? query(collection(firestore, 'top_up_requests'), where('status', '==', 'tertunda'), limit(5)) : null,
+    firestore ? query(collection(firestore, 'top_up_requests'), where('status', '==', 'pending'), limit(5)) : null,
   [firestore]);
 
   const recentStoresQuery = useMemoFirebase(() => 

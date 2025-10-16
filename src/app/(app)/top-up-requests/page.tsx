@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function TopUpRequestsPage() {
   const firestore = useFirestore();
-  const [activeTab, setActiveTab] = useState<'tertunda' | 'disetujui' | 'ditolak'>('tertunda');
+  const [activeTab, setActiveTab] = useState<'pending' | 'disetujui' | 'ditolak'>('pending');
 
   const requestsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -57,7 +57,7 @@ export default function TopUpRequestsPage() {
   return (
     <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)}>
         <TabsList className='mb-4'>
-            <TabsTrigger value="tertunda">Tertunda</TabsTrigger>
+            <TabsTrigger value="pending">Tertunda</TabsTrigger>
             <TabsTrigger value="disetujui">Disetujui</TabsTrigger>
             <TabsTrigger value="ditolak">Ditolak</TabsTrigger>
         </TabsList>

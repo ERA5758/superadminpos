@@ -33,7 +33,7 @@ export type TopUpRequest = {
   storeName: string;
   amount: number;
   requestDate: Timestamp | Date | string;
-  status: 'tertunda' | 'disetujui' | 'ditolak';
+  status: 'pending' | 'disetujui' | 'ditolak';
   approvalDate?: Timestamp | Date | string;
   approvedBy?: string;
 };
