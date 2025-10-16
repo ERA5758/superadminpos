@@ -28,8 +28,9 @@ export default function DashboardPage() {
     firestore ? query(collection(firestore, 'top_up_requests'), where('status', '==', 'pending'), limit(5)) : null,
   [firestore]);
 
+  // FIX: Order by 'name' as 'createdAt' might not exist on all store documents, causing query failure.
   const recentStoresQuery = useMemoFirebase(() => 
-    firestore ? query(collection(firestore, 'stores'), orderBy('createdAt', 'desc'), limit(5)) : null,
+    firestore ? query(collection(firestore, 'stores'), orderBy('name', 'desc'), limit(5)) : null,
   [firestore]);
 
   const { data: overviewData, isLoading: isLoadingOverview } = useCollection<PlatformOverview>(platformOverviewQuery);
@@ -57,7 +58,11 @@ export default function DashboardPage() {
   const formatDate = (date: Timestamp | Date | string | undefined) => {
       if (!date) return '-';
       const dateObj = date instanceof Timestamp ? date.toDate() : new Date(date);
-      return format(dateObj, "d MMM yyyy", { locale: id });
+      try {
+        return format(dateObj, "d MMM yyyy", { locale: id });
+      } catch (e) {
+        return '-'
+      }
   }
 
   const isLoading = isLoadingOverview || isLoadingTopUps || isLoadingStores;

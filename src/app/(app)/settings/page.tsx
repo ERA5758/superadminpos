@@ -51,6 +51,33 @@ type SettingsData = {
     notificationSettings: NotificationSettings;
 };
 
+// Default values to prevent NaN and undefined errors
+const defaultSettings: SettingsData = {
+    bankInfo: {
+        bankName: "",
+        accountHolder: "",
+        accountNumber: "",
+    },
+    feeSettings: {
+        feePercentage: 0,
+        minFeeRp: 0,
+        maxFeeRp: 0,
+        aiUsageFee: 0,
+        newStoreBonusTokens: 0,
+        catalogMonthlyFee: 0,
+        catalogSixMonthFee: 0,
+        catalogYearlyFee: 0,
+        aiBusinessPlanFee: 0,
+        aiSessionDurationMinutes: 0,
+        aiSessionFee: 0,
+        tokenValueRp: 1,
+    },
+    notificationSettings: {
+        waDeviceId: "",
+        waAdminGroup: "",
+    }
+};
+
 export default function SettingsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -65,43 +92,46 @@ export default function SettingsPage() {
       if (!firestore) return;
       setIsLoading(true);
       try {
-        const settingsRef = collection(firestore, "appsetting");
+        const settingsRef = collection(firestore, "platform_settings"); // FIX: Correct collection name
         const querySnapshot = await getDocs(settingsRef);
         
-        const fetchedSettings: { [key: string]: any } = {};
+        const fetchedValues: { [key: string]: any } = {};
         const newDocIds: {[key: string]: string} = {};
 
         querySnapshot.forEach((doc) => {
           const data = doc.data();
-          fetchedSettings[data.settingKey] = data.settingValue;
+          fetchedValues[data.settingKey] = data.settingValue;
           newDocIds[data.settingKey] = doc.id;
         });
         
-        setSettings({
+        // Merge fetched data with defaults to ensure all fields are present
+        const newSettings: SettingsData = {
             bankInfo: {
-                bankName: fetchedSettings.bankName || "",
-                accountHolder: fetchedSettings.accountHolder || "",
-                accountNumber: fetchedSettings.accountNumber || "",
+                bankName: fetchedValues.bankName || defaultSettings.bankInfo.bankName,
+                accountHolder: fetchedValues.accountHolder || defaultSettings.bankInfo.accountHolder,
+                accountNumber: fetchedValues.accountNumber || defaultSettings.bankInfo.accountNumber,
             },
             feeSettings: {
-                feePercentage: Number(fetchedSettings.feePercentage) || 0,
-                minFeeRp: Number(fetchedSettings.minFeeRp) || 0,
-                maxFeeRp: Number(fetchedSettings.maxFeeRp) || 0,
-                aiUsageFee: Number(fetchedSettings.aiUsageFee) || 0,
-                newStoreBonusTokens: Number(fetchedSettings.newStoreBonusTokens) || 0,
-                catalogMonthlyFee: Number(fetchedSettings.catalogMonthlyFee) || 0,
-                catalogSixMonthFee: Number(fetchedSettings.catalogSixMonthFee) || 0,
-                catalogYearlyFee: Number(fetchedSettings.catalogYearlyFee) || 0,
-                aiBusinessPlanFee: Number(fetchedSettings.aiBusinessPlanFee) || 0,
-                aiSessionDurationMinutes: Number(fetchedSettings.aiSessionDurationMinutes) || 0,
-                aiSessionFee: Number(fetchedSettings.aiSessionFee) || 0,
-                tokenValueRp: Number(fetchedSettings.tokenValueRp) || 1,
+                feePercentage: Number(fetchedValues.feePercentage) || defaultSettings.feeSettings.feePercentage,
+                minFeeRp: Number(fetchedValues.minFeeRp) || defaultSettings.feeSettings.minFeeRp,
+                maxFeeRp: Number(fetchedValues.maxFeeRp) || defaultSettings.feeSettings.maxFeeRp,
+                aiUsageFee: Number(fetchedValues.aiUsageFee) || defaultSettings.feeSettings.aiUsageFee,
+                newStoreBonusTokens: Number(fetchedValues.newStoreBonusTokens) || defaultSettings.feeSettings.newStoreBonusTokens,
+                catalogMonthlyFee: Number(fetchedValues.catalogMonthlyFee) || defaultSettings.feeSettings.catalogMonthlyFee,
+                catalogSixMonthFee: Number(fetchedValues.catalogSixMonthFee) || defaultSettings.feeSettings.catalogSixMonthFee,
+                catalogYearlyFee: Number(fetchedValues.catalogYearlyFee) || defaultSettings.feeSettings.catalogYearlyFee,
+                aiBusinessPlanFee: Number(fetchedValues.aiBusinessPlanFee) || defaultSettings.feeSettings.aiBusinessPlanFee,
+                aiSessionDurationMinutes: Number(fetchedValues.aiSessionDurationMinutes) || defaultSettings.feeSettings.aiSessionDurationMinutes,
+                aiSessionFee: Number(fetchedValues.aiSessionFee) || defaultSettings.feeSettings.aiSessionFee,
+                tokenValueRp: Number(fetchedValues.tokenValueRp) || defaultSettings.feeSettings.tokenValueRp,
             },
             notificationSettings: {
-                waDeviceId: fetchedSettings.waDeviceId || "",
-                waAdminGroup: fetchedSettings.waAdminGroup || "",
+                waDeviceId: fetchedValues.waDeviceId || defaultSettings.notificationSettings.waDeviceId,
+                waAdminGroup: fetchedValues.waAdminGroup || defaultSettings.notificationSettings.waAdminGroup,
             }
-        });
+        };
+
+        setSettings(newSettings);
         setDocIds(newDocIds);
 
       } catch (error) {
@@ -129,6 +159,9 @@ export default function SettingsPage() {
 
     if (category === 'feeSettings') {
         processedValue = value === '' ? 0 : Number(value);
+        if (isNaN(processedValue)) {
+            processedValue = 0;
+        }
     }
   
     setSettings(prev => {
@@ -149,9 +182,9 @@ export default function SettingsPage() {
      const updates = Object.entries(settingsToSave).map(([key, value]) => {
          const docId = docIds[key];
          if (docId) {
-             const docRef = doc(firestore, "appsetting", docId);
+             const docRef = doc(firestore, "platform_settings", docId);
              // For percentage, divide by 100 before saving if needed
-             const valueToSave = key === 'feePercentage' ? String(Number(value) / 100) : String(value);
+             const valueToSave = String(value);
              return updateDocumentNonBlocking(docRef, { settingValue: valueToSave });
          }
          console.warn(`No document ID found for setting key: ${key}`);
@@ -169,18 +202,6 @@ export default function SettingsPage() {
      }
   };
 
-  const handleSaveFeePercentage = () => {
-    if (!firestore || !settings) return;
-    const docId = docIds['feePercentage'];
-    if (docId) {
-        const docRef = doc(firestore, "appsetting", docId);
-        updateDocumentNonBlocking(docRef, { settingValue: String(settings.feeSettings.feePercentage) });
-    }
-    // create a new object with other fee settings
-    const otherFeeSettings = { ...settings.feeSettings };
-    delete otherFeeSettings.feePercentage;
-    handleSave(otherFeeSettings);
-  };
 
   if (isLoading || !settings) {
     return (
@@ -287,7 +308,7 @@ export default function SettingsPage() {
             </div>
         </CardContent>
         <CardFooter className="border-t px-6 py-4">
-          <Button onClick={handleSaveFeePercentage}>Simpan Perubahan</Button>
+          <Button onClick={() => handleSave(settings.feeSettings)}>Simpan Perubahan</Button>
         </CardFooter>
       </Card>
 
@@ -359,12 +380,3 @@ function SettingsSkeleton({ count = 3 }: { count?: number }) {
         </div>
     )
 }
-    
-
-    
-
-    
-
-    
-
-    
