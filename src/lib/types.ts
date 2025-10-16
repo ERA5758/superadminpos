@@ -5,7 +5,6 @@ export type Store = {
   name: string;
   isActive: boolean;
   pradanaTokenBalance: number;
-  totalTransactions: number;
   premiumCatalogSubscriptionExpiry?: Timestamp | Date | string | null;
   createdAt: Timestamp | Date | string;
   // These fields will now be populated from the UserProfile
@@ -30,7 +29,7 @@ export type UserProfile = {
 export type TopUpRequest = {
   id: string;
   storeId: string;
-  storeName: string;
+  storeName:string;
   amount: number;
   requestDate: Timestamp | Date | string;
   status: 'pending' | 'disetujui' | 'ditolak';
@@ -40,11 +39,11 @@ export type TopUpRequest = {
 
 export type Transaction = {
   id: string;
-  storeName: string;
-  amount: number;
-  date: string;
-  type: 'Isi Ulang' | 'Biaya' | 'Penjualan';
-  status: 'Selesai' | 'Tertunda' | 'Gagal';
+  storeId: string;
+  type: 'pos' | 'ai' | 'topup';
+  amount: number; // The number of tokens transacted
+  createdAt: Timestamp;
+  description: string; // e.g., "AI Business Plan Usage", "POS Transaction Fee"
 };
 
 export type PlatformOverview = {

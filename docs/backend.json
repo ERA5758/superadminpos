@@ -96,6 +96,37 @@
         "status"
       ]
     },
+    "Transaction": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Transaction",
+      "type": "object",
+      "description": "Represents a single transaction involving Pradana Tokens.",
+      "properties": {
+        "storeId": {
+          "type": "string",
+          "description": "The ID of the store that performed the transaction."
+        },
+        "type": {
+          "type": "string",
+          "description": "The type of transaction.",
+          "enum": ["pos", "ai", "topup"]
+        },
+        "amount": {
+          "type": "number",
+          "description": "The number of tokens involved in the transaction. Positive for additions (top-up), negative for subtractions (usage)."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the transaction occurred."
+        },
+        "description": {
+          "type": "string",
+          "description": "A brief description of the transaction (e.g., 'POS Transaction Fee', 'AI Business Plan Usage')."
+        }
+      },
+      "required": ["storeId", "type", "amount", "createdAt", "description"]
+    },
     "Store": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Store",
@@ -254,23 +285,13 @@
   "firestore": {
     "structure": [
       {
-        "path": "/platform_overviews/{platformOverviewId}",
+        "path": "/appSettings/{docId}",
         "definition": {
-          "entityName": "PlatformOverview",
-          "schema": {
-            "$ref": "#/backend/entities/PlatformOverview"
-          },
-          "description": "Stores aggregated platform overview data. Accessible only to superadmins.",
-          "params": [
-            {
-              "name": "platformOverviewId",
-              "description": "The unique identifier for the platform overview document."
-            }
-          ]
+          "description": "Stores global application settings as individual documents (e.g., 'transactionFees', 'bankAccount'). Accessible only to superadmins."
         }
       },
       {
-        "path": "/top_up_requests/{topUpRequestId}",
+        "path": "/topUpRequests/{topUpRequestId}",
         "definition": {
           "entityName": "TopUpRequest",
           "schema": {
@@ -281,6 +302,22 @@
             {
               "name": "topUpRequestId",
               "description": "The unique identifier for the top-up request."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/transactions/{transactionId}",
+        "definition": {
+          "entityName": "Transaction",
+          "schema": {
+            "$ref": "#/backend/entities/Transaction"
+          },
+          "description": "Stores a log of all token transactions (POS usage, AI usage, top-ups) across the platform.",
+          "params": [
+            {
+              "name": "transactionId",
+              "description": "The unique identifier for the transaction."
             }
           ]
         }
@@ -334,22 +371,6 @@
         }
       },
       {
-        "path": "/platform_settings/{platformSettingId}",
-        "definition": {
-          "entityName": "PlatformSetting",
-          "schema": {
-            "$ref": "#/backend/entities/PlatformSetting"
-          },
-          "description": "Stores platform-wide settings. Accessible only to superadmins.",
-          "params": [
-            {
-              "name": "platformSettingId",
-              "description": "The unique identifier for the platform setting."
-            }
-          ]
-        }
-      },
-      {
         "path": "/roles_admin/{adminId}",
         "definition": {
           "entityName": "AdminRole",
@@ -369,5 +390,3 @@
     "reasoning": "The Firestore structure is designed to provide a secure, scalable, and easily maintainable data model for the Chika POS F&B Admin Console. It emphasizes authorization independence through data denormalization to avoid complex `get()` calls in security rules and enable atomic operations. Structural segregation ensures that each collection has a homogeneous security posture, simplifying rule definitions. The structure facilitates simple, robust, and easily debuggable security rules.\n\nKey aspects of the design include:\n\n*   **Authorization Independence (Denormalization):** The `Store` documents store the `premiumCatalogSubscriptionExpiry`. This avoids needing to read a separate subscription document to determine access rights.\n*   **Structural Segregation:** Each collection is dedicated to a specific entity and access pattern, ensuring homogeneous security requirements within each collection. The `users` collection now holds store profile information, separating it from operational store data.\n*   **QAPs (Rules are not Filters):** The structure allows for secure list operations by ensuring that listing collections does not expose data that the user is not authorized to access. For example, the `platform_overviews` collection is only accessible to superadmins.\n*   **DBAC (No Custom Claims):** Authorization relies solely on `request.auth.uid`. Admin status can be checked via the existence of their `uid` in the `/roles_admin` collection, which can be used in rules to grant access to sensitive data."
   }
 }
-
-    

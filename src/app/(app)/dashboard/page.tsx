@@ -13,7 +13,7 @@ import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, where, orderBy, limit, Timestamp, doc } from 'firebase/firestore';
-import type { Store, TopUpRequest } from '@/lib/types';
+import type { Store, TopUpRequest, Transaction } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
 type FeeSettings = {
@@ -36,6 +36,10 @@ export default function DashboardPage() {
     firestore ? collection(firestore, 'stores') : null,
   [firestore]);
 
+  const transactionsQuery = useMemoFirebase(() =>
+    firestore ? collection(firestore, 'transactions') : null,
+  [firestore]);
+
   const topUpRequestsQuery = useMemoFirebase(() => 
     firestore ? query(collection(firestore, 'topUpRequests'), where('status', '==', 'pending'), limit(5)) : null,
   [firestore]);
@@ -46,6 +50,7 @@ export default function DashboardPage() {
 
   const { data: settingsData, isLoading: isLoadingSettings } = useDoc<FeeSettings>(settingsDocRef);
   const { data: stores, isLoading: isLoadingStores } = useCollection<Store>(storesQuery);
+  const { data: transactions, isLoading: isLoadingTransactions } = useCollection<Transaction>(transactionsQuery);
   const { data: pendingTopUps, isLoading: isLoadingTopUps, error: topUpsError } = useCollection<TopUpRequest>(topUpRequestsQuery);
   const { data: recentStores, isLoading: isLoadingRecentStores } = useCollection<Store>(recentStoresQuery);
   
@@ -53,11 +58,19 @@ export default function DashboardPage() {
   useEffect(() => {
     if (stores) {
       const calculatedTokenBalance = stores.reduce((acc, store) => acc + (store.pradanaTokenBalance || 0), 0);
-      const calculatedTransactions = stores.reduce((acc, store) => acc + (store.totalTransactions || 0), 0);
       setTotalTokenBalance(calculatedTokenBalance);
-      setTotalTransactions(calculatedTransactions);
     }
   }, [stores]);
+
+  useEffect(() => {
+    if (transactions) {
+       // Filter out 'topup' transactions and sum the amounts of the rest
+      const calculatedTransactions = transactions
+        .filter(t => t.type === 'pos' || t.type === 'ai')
+        .reduce((acc, t) => acc + (t.amount || 0), 0);
+      setTotalTransactions(calculatedTransactions);
+    }
+  }, [transactions]);
   
   const growthChartData = settingsData?.growthChartData ? JSON.parse(settingsData.growthChartData) : [];
   const totalStores = stores?.length ?? 0;
@@ -86,7 +99,7 @@ export default function DashboardPage() {
       }
   }
 
-  const isLoading = isLoadingSettings || isLoadingTopUps || isLoadingRecentStores || isLoadingStores;
+  const isLoading = isLoadingSettings || isLoadingTopUps || isLoadingRecentStores || isLoadingStores || isLoadingTransactions;
 
   // --- Render Skeletons ---
   if (isLoading && !settingsData && !pendingTopUps && !recentStores && !stores) {
@@ -126,9 +139,9 @@ export default function DashboardPage() {
         />
         <StatCard
           title="Total Transaksi"
-          value={isLoadingStores ? <Skeleton className='h-7 w-20'/> : formatNumber(totalTransactions)}
+          value={isLoadingTransactions ? <Skeleton className='h-7 w-20'/> : formatNumber(totalTransactions)}
           icon={Users}
-          description="Transaksi di seluruh platform"
+          description="Penggunaan token di seluruh platform"
         />
         <StatCard
           title="Total Pendapatan"
