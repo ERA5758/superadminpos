@@ -25,7 +25,7 @@ export default function DashboardPage() {
   [firestore]);
   
   const topUpRequestsQuery = useMemoFirebase(() => 
-    firestore ? query(collection(firestore, 'top_up_requests'), where('status', '==', 'pending'), limit(5)) : null,
+    firestore ? query(collection(firestore, 'topUpRequests'), where('status', '==', 'pending'), limit(5)) : null,
   [firestore]);
 
   // FIX: Order by 'name' as 'createdAt' might not exist on all store documents, causing query failure.

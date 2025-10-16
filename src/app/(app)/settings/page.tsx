@@ -92,7 +92,7 @@ export default function SettingsPage() {
       if (!firestore) return;
       setIsLoading(true);
       try {
-        const settingsRef = collection(firestore, "platform_settings"); // FIX: Correct collection name
+        const settingsRef = collection(firestore, "appSettings");
         const querySnapshot = await getDocs(settingsRef);
         
         const fetchedValues: { [key: string]: any } = {};
@@ -182,7 +182,7 @@ export default function SettingsPage() {
      const updates = Object.entries(settingsToSave).map(([key, value]) => {
          const docId = docIds[key];
          if (docId) {
-             const docRef = doc(firestore, "platform_settings", docId);
+             const docRef = doc(firestore, "appSettings", docId);
              // For percentage, divide by 100 before saving if needed
              const valueToSave = String(value);
              return updateDocumentNonBlocking(docRef, { settingValue: valueToSave });

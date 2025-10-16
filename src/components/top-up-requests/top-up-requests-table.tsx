@@ -39,7 +39,7 @@ export function TopUpRequestsTable({ requests }: { requests: TopUpRequest[] }) {
         const batch = writeBatch(firestore);
 
         // Path to the top-up request document in the root collection
-        const requestRef = doc(firestore, "top_up_requests", request.id);
+        const requestRef = doc(firestore, "topUpRequests", request.id);
         
         const updateData = { 
             status: action,

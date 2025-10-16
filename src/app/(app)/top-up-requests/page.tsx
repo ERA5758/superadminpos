@@ -20,7 +20,7 @@ export default function TopUpRequestsPage() {
   const requestsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(
-        collection(firestore, 'top_up_requests'), 
+        collection(firestore, 'topUpRequests'), 
         where('status', '==', activeTab)
         // orderBy('requestDate', 'desc') -> This causes an error without a composite index
     );
