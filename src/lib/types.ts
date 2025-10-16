@@ -7,6 +7,7 @@ export type Store = {
   pradanaTokenBalance: number;
   premiumCatalogSubscriptionExpiry?: Timestamp | Date | string | null;
   createdAt: Timestamp | Date | string;
+  referralCode?: string;
   // These fields will now be populated from the UserProfile
   ownerName?: string;
   contactEmail?: string;
