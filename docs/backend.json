@@ -1,6 +1,36 @@
 
 {
   "entities": {
+    "ReferralCode": {
+      "title": "ReferralCode",
+      "type": "object",
+      "description": "Represents a referral code used by the sales division.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "The unique referral code string."
+        },
+        "salesPersonName": {
+          "type": "string",
+          "description": "Name of the sales person this code belongs to."
+        },
+        "isActive": {
+          "type": "boolean",
+          "description": "Whether the referral code is currently active and can be used."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The timestamp when the referral code was created."
+        }
+      },
+      "required": [
+        "id",
+        "salesPersonName",
+        "isActive",
+        "createdAt"
+      ]
+    },
     "PlatformOverview": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "PlatformOverview",
@@ -385,8 +415,26 @@
             }
           ]
         }
+      },
+      {
+        "path": "/referralCode/{referralCodeId}",
+        "definition": {
+          "entityName": "ReferralCode",
+          "schema": {
+            "$ref": "#/backend/entities/ReferralCode"
+          },
+          "description": "Stores referral codes for the sales division. Only registered and active codes can be used for new store registrations.",
+          "params": [
+            {
+              "name": "referralCodeId",
+              "description": "The unique identifier for the referral code, which is the code itself."
+            }
+          ]
+        }
       }
     ],
     "reasoning": "The Firestore structure is designed to provide a secure, scalable, and easily maintainable data model for the Chika POS F&B Admin Console. It emphasizes authorization independence through data denormalization to avoid complex `get()` calls in security rules and enable atomic operations. Structural segregation ensures that each collection has a homogeneous security posture, simplifying rule definitions. The structure facilitates simple, robust, and easily debuggable security rules.\n\nKey aspects of the design include:\n\n*   **Authorization Independence (Denormalization):** The `Store` documents store the `premiumCatalogSubscriptionExpiry`. This avoids needing to read a separate subscription document to determine access rights.\n*   **Structural Segregation:** Each collection is dedicated to a specific entity and access pattern, ensuring homogeneous security requirements within each collection. The `users` collection now holds store profile information, separating it from operational store data.\n*   **QAPs (Rules are not Filters):** The structure allows for secure list operations by ensuring that listing collections does not expose data that the user is not authorized to access. For example, the `platform_overviews` collection is only accessible to superadmins.\n*   **DBAC (No Custom Claims):** Authorization relies solely on `request.auth.uid`. Admin status can be checked via the existence of their `uid` in the `/roles_admin` collection, which can be used in rules to grant access to sensitive data."
   }
 }
+
+    
