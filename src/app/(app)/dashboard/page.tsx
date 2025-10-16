@@ -11,35 +11,45 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy, limit, Timestamp } from 'firebase/firestore';
+import { useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
+import { collection, query, where, orderBy, limit, Timestamp, doc } from 'firebase/firestore';
 import type { PlatformOverview, Store, TopUpRequest } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
+
+type FeeSettings = {
+    totalTokenBalance?: number;
+    totalRevenue?: number;
+    totalTransactions?: number;
+    growthChartData?: string;
+};
 
 export default function DashboardPage() {
   const firestore = useFirestore();
 
   // --- Data Fetching ---
-  const platformOverviewQuery = useMemoFirebase(() => 
-    firestore ? query(collection(firestore, 'platform_overviews'), limit(1)) : null, 
+  const appSettingsDocRef = useMemoFirebase(() => 
+    firestore ? doc(firestore, 'appSettings', 'transactionFees') : null,
   [firestore]);
-  
+
+  const storesQuery = useMemoFirebase(() =>
+    firestore ? collection(firestore, 'stores') : null,
+  [firestore]);
+
   const topUpRequestsQuery = useMemoFirebase(() => 
     firestore ? query(collection(firestore, 'topUpRequests'), where('status', '==', 'pending'), limit(5)) : null,
   [firestore]);
 
-  // FIX: Order by 'name' as 'createdAt' might not exist on all store documents, causing query failure.
   const recentStoresQuery = useMemoFirebase(() => 
     firestore ? query(collection(firestore, 'stores'), orderBy('name', 'desc'), limit(5)) : null,
   [firestore]);
 
-  const { data: overviewData, isLoading: isLoadingOverview } = useCollection<PlatformOverview>(platformOverviewQuery);
+  const { data: settingsData, isLoading: isLoadingSettings } = useDoc<FeeSettings>(appSettingsDocRef);
+  const { data: stores, isLoading: isLoadingStoresCount } = useCollection<Store>(storesQuery);
   const { data: pendingTopUps, isLoading: isLoadingTopUps, error: topUpsError } = useCollection<TopUpRequest>(topUpRequestsQuery);
-  const { data: recentStores, isLoading: isLoadingStores } = useCollection<Store>(recentStoresQuery);
+  const { data: recentStores, isLoading: isLoadingRecentStores } = useCollection<Store>(recentStoresQuery);
   
-  const overview = overviewData?.[0];
-  const growthChartData = overview?.growthChartData ? JSON.parse(overview.growthChartData) : [];
-
+  const growthChartData = settingsData?.growthChartData ? JSON.parse(settingsData.growthChartData) : [];
+  const totalStores = stores?.length ?? 0;
 
   // --- Formatting Functions ---
   const formatCurrency = (amount: number) => {
@@ -65,10 +75,10 @@ export default function DashboardPage() {
       }
   }
 
-  const isLoading = isLoadingOverview || isLoadingTopUps || isLoadingStores;
+  const isLoading = isLoadingSettings || isLoadingTopUps || isLoadingRecentStores || isLoadingStoresCount;
 
   // --- Render Skeletons ---
-  if (isLoading && !overview && !pendingTopUps && !recentStores) {
+  if (isLoading && !settingsData && !pendingTopUps && !recentStores) {
     return (
       <div className="flex flex-col gap-6">
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -93,25 +103,25 @@ export default function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Saldo Token"
-          value={overview ? formatNumber(overview.totalTokenBalance) : '...'}
+          value={settingsData?.totalTokenBalance ? formatNumber(settingsData.totalTokenBalance) : '0'}
           icon={WalletCards}
           description="Gabungan saldo dari semua toko"
         />
         <StatCard
           title="Total Toko Terdaftar"
-          value={overview ? overview.totalStores.toString() : '...'}
+          value={totalStores.toString()}
           icon={Building2}
           description="Jumlah total tenant aktif"
         />
         <StatCard
           title="Total Transaksi"
-          value={overview ? formatNumber(overview.totalTransactions) : '...'}
+          value={settingsData?.totalTransactions ? formatNumber(settingsData.totalTransactions) : '0'}
           icon={Users}
           description="Transaksi di seluruh platform"
         />
         <StatCard
           title="Total Pendapatan"
-          value={overview ? formatCurrency(overview.totalRevenue) : '...'}
+          value={settingsData?.totalRevenue ? formatCurrency(settingsData.totalRevenue) : 'Rp 0'}
           icon={Banknote}
           description="Pendapatan platform"
         />
@@ -177,7 +187,7 @@ export default function DashboardPage() {
               </Button>
             </CardHeader>
             <CardContent>
-              {isLoadingStores ? <TableSkeleton rows={5} cols={2}/> : (
+              {isLoadingRecentStores ? <TableSkeleton rows={5} cols={2}/> : (
                 <Table>
                   <TableHeader>
                     <TableRow>
