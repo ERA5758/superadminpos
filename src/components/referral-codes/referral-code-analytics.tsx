@@ -5,16 +5,15 @@ import type { ReferralCode } from "@/lib/types";
 import { Card, CardHeader, CardContent, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, Banknote, PlusCircle, Check, X } from "lucide-react";
+import { Users, Banknote, Check, X, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { format } from 'date-fns';
-import { id } from 'date-fns/locale';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 
 export type AnalyticsData = ReferralCode & {
   totalStoresRegistered: number;
@@ -22,7 +21,7 @@ export type AnalyticsData = ReferralCode & {
   registeredStoresList: string[];
 };
 
-export function ReferralCodeAnalytics({ data }: { data: AnalyticsData[] }) {
+export function ReferralCodeAnalytics({ data, error }: { data: AnalyticsData[], error?: Error | null }) {
     
     const formatCurrency = (amount: number) => {
         return new Intl.NumberFormat('id-ID', {
@@ -32,6 +31,18 @@ export function ReferralCodeAnalytics({ data }: { data: AnalyticsData[] }) {
             maximumFractionDigits: 0,
         }).format(amount);
     };
+
+  if (error) {
+     return (
+        <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Gagal Memuat Kode Referral</AlertTitle>
+            <AlertDescription>
+                Tidak dapat mengambil data dari server. Pastikan Anda memiliki izin yang benar dan coba lagi.
+            </AlertDescription>
+        </Alert>
+     )
+  }
 
   if (data.length === 0) {
     return (
@@ -43,7 +54,7 @@ export function ReferralCodeAnalytics({ data }: { data: AnalyticsData[] }) {
                 <CardTitle className="mt-4">Tidak Ada Data</CardTitle>
             </CardHeader>
             <CardContent>
-                <p className="text-muted-foreground">Tidak ada data referral untuk periode yang dipilih.</p>
+                <p className="text-muted-foreground">Tidak ada data referral untuk periode yang dipilih atau belum ada kode yang dibuat.</p>
             </CardContent>
         </Card>
     );

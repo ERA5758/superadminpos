@@ -7,9 +7,9 @@ import { collection, query, where, orderBy, Timestamp } from 'firebase/firestore
 import type { ReferralCode, Store, TopUpRequest } from "@/lib/types";
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ReferralCodeAnalytics, type AnalyticsData } from '@/components/referral-codes/referral-code-analytics';
+import { AddReferralCode } from '@/components/referral-codes/add-referral-code';
 import { getYear, getMonth } from 'date-fns';
 
 export default function ReferralCodesPage() {
@@ -35,7 +35,7 @@ export default function ReferralCodesPage() {
     firestore ? query(collection(firestore, 'topUpRequests'), where('status', '==', 'disetujui')) : null, 
   [firestore]);
 
-  const { data: codes, isLoading: isLoadingCodes } = useCollection<ReferralCode>(codesQuery);
+  const { data: codes, isLoading: isLoadingCodes, error: codesError } = useCollection<ReferralCode>(codesQuery);
   const { data: stores, isLoading: isLoadingStores } = useCollection<Store>(storesQuery);
   const { data: topUps, isLoading: isLoadingTopUps } = useCollection<TopUpRequest>(topUpsQuery);
   
@@ -45,12 +45,14 @@ export default function ReferralCodesPage() {
 
     // 1. Filter stores and top-ups based on the selected period
     const filteredStores = stores.filter(store => {
+      if (!store.createdAt) return false;
       const createdAt = store.createdAt instanceof Timestamp ? store.createdAt.toDate() : new Date(store.createdAt);
       return getYear(createdAt) === selectedYear && getMonth(createdAt) === selectedMonth;
     });
 
     const filteredTopUps = topUps.filter(topUp => {
-      const approvalDate = topUp.approvalDate instanceof Timestamp ? topUp.approvalDate.toDate() : new Date(topUp.approvalDate!);
+      if (!topUp.approvalDate) return false;
+      const approvalDate = topUp.approvalDate instanceof Timestamp ? topUp.approvalDate.toDate() : new Date(topUp.approvalDate);
       return getYear(approvalDate) === selectedYear && getMonth(approvalDate) === selectedMonth;
     });
 
@@ -99,11 +101,11 @@ export default function ReferralCodesPage() {
 
   const isLoading = isLoadingCodes || isLoadingStores || isLoadingTopUps;
 
-  if (isLoading && analyticsData.length === 0) {
+  if (isLoading && analyticsData.length === 0 && !codesError) {
     return (
         <div className="space-y-4">
-            <div className="flex gap-4">
-                <Skeleton className="h-10 w-48" />
+             <div className="flex justify-between items-center">
+                <Skeleton className="h-10 w-64" />
                 <Skeleton className="h-10 w-32" />
             </div>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -118,40 +120,44 @@ export default function ReferralCodesPage() {
   return (
     <div className='space-y-6'>
        <Card>
-            <CardContent className="pt-6 flex flex-wrap items-center gap-4">
-                <h3 className='text-sm font-medium text-muted-foreground'>Filter Periode:</h3>
-                <div className='flex items-center gap-2'>
-                    <Select
-                        value={selectedMonth.toString()}
-                        onValueChange={(value) => setSelectedMonth(Number(value))}
-                    >
-                        <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder="Pilih Bulan" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {months.map((month, index) => (
-                                <SelectItem key={index} value={index.toString()}>{month}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    <Select
-                        value={selectedYear.toString()}
-                        onValueChange={(value) => setSelectedYear(Number(value))}
-                    >
-                        <SelectTrigger className="w-[120px]">
-                            <SelectValue placeholder="Pilih Tahun" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {years.map(year => (
-                                <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+            <CardContent className="pt-6 flex flex-wrap items-center justify-between gap-4">
+                <div className='flex items-center gap-4'>
+                    <h3 className='text-sm font-medium text-muted-foreground whitespace-nowrap'>Filter Periode:</h3>
+                    <div className='flex items-center gap-2'>
+                        <Select
+                            value={selectedMonth.toString()}
+                            onValueChange={(value) => setSelectedMonth(Number(value))}
+                        >
+                            <SelectTrigger className="w-[180px]">
+                                <SelectValue placeholder="Pilih Bulan" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {months.map((month, index) => (
+                                    <SelectItem key={index} value={index.toString()}>{month}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <Select
+                            value={selectedYear.toString()}
+                            onValueChange={(value) => setSelectedYear(Number(value))}
+                        >
+                            <SelectTrigger className="w-[120px]">
+                                <SelectValue placeholder="Pilih Tahun" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {years.map(year => (
+                                    <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
                 </div>
+                <AddReferralCode />
             </CardContent>
         </Card>
       
-      <ReferralCodeAnalytics data={analyticsData} />
+      <ReferralCodeAnalytics data={analyticsData} error={codesError} />
     </div>
   );
 }
+
