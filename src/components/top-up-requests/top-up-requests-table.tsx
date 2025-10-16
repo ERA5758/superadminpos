@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { TopUpRequest } from "@/lib/types";
@@ -13,12 +14,12 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, XCircle, Hourglass } from "lucide-react";
+import { CheckCircle2, XCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useFirestore } from "@/firebase";
-import { doc, updateDoc } from "firebase/firestore";
-import { setDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { doc, increment, writeBatch, Timestamp } from "firebase/firestore";
+import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 
@@ -26,7 +27,7 @@ export function TopUpRequestsTable({ requests }: { requests: TopUpRequest[] }) {
     const { toast } = useToast();
     const firestore = useFirestore();
 
-    const handleAction = (request: TopUpRequest, action: 'disetujui' | 'ditolak') => {
+    const handleAction = async (request: TopUpRequest, action: 'disetujui' | 'ditolak') => {
         if (!firestore) {
             toast({
                 variant: 'destructive',
@@ -36,27 +37,52 @@ export function TopUpRequestsTable({ requests }: { requests: TopUpRequest[] }) {
             return;
         }
 
-        // The path now needs the storeId to correctly locate the subcollection document
-        const requestRef = doc(firestore, "stores", request.storeId, "topUpRequests", request.id);
-        
-        updateDocumentNonBlocking(requestRef, { status: action });
-        
-        // Note: Logic for updating store's tokenBalance will be added later
-        // For now, we just update the request status
+        const batch = writeBatch(firestore);
 
-        toast({
-            title: `Permintaan ${action === 'disetujui' ? 'Disetujui' : 'Ditolak'}`,
-            description: `Permintaan isi ulang untuk ${request.storeName} telah ${action === 'disetujui' ? 'disetujui' : 'ditolak'}.`,
-        });
+        // Path to the top-up request document
+        const requestRef = doc(firestore, "stores", request.storeId, "top_up_requests", request.id);
+        
+        const updateData = { 
+            status: action,
+            approvalDate: Timestamp.now(),
+            // approvedBy: currentAdminUid // TODO: Add current admin UID
+        };
+
+        batch.update(requestRef, updateData);
+
+        // If approved, update the store's token balance
+        if (action === 'disetujui') {
+            const storeRef = doc(firestore, "stores", request.storeId);
+            batch.update(storeRef, { pradanaTokenBalance: increment(request.amount) });
+        }
+        
+        try {
+            await batch.commit();
+            toast({
+                title: `Permintaan ${action === 'disetujui' ? 'Disetujui' : 'Ditolak'}`,
+                description: `Permintaan isi ulang untuk ${request.storeName} telah ${action}.`,
+            });
+        } catch (error: any) {
+             toast({
+                variant: 'destructive',
+                title: "Gagal Memperbarui",
+                description: `Gagal memperbarui status permintaan: ${error.message}`,
+            });
+            // Note: We are not using the global error emitter here for batch writes
+            console.error("Batch write failed:", error);
+        }
+
     };
     
     const formatNumber = (amount: number) => {
         return new Intl.NumberFormat('id-ID').format(amount);
     };
 
-    const formatDate = (dateString: string | Date) => {
+    const formatDate = (date: Timestamp | Date | string | undefined) => {
+      if (!date) return '-';
       try {
-        return format(new Date(dateString), "d MMMM yyyy, HH:mm", { locale: id });
+        const dateObj = date instanceof Timestamp ? date.toDate() : new Date(date);
+        return format(dateObj, "d MMM yyyy, HH:mm", { locale: id });
       } catch (error) {
         return "Tanggal tidak valid";
       }
@@ -66,12 +92,12 @@ export function TopUpRequestsTable({ requests }: { requests: TopUpRequest[] }) {
     <Card>
       <CardContent className="pt-6">
         <Table>
-          {requests.length === 0 && <TableCaption>Belum ada permintaan isi ulang.</TableCaption>}
+          {requests.length === 0 && <TableCaption>Tidak ada permintaan dengan status ini.</TableCaption>}
           <TableHeader>
             <TableRow>
               <TableHead>Nama Toko</TableHead>
               <TableHead>Jumlah</TableHead>
-              <TableHead>Tanggal Permintaan</TableHead>
+              <TableHead>Tgl. Permintaan</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Aksi</TableHead>
             </TableRow>
@@ -105,19 +131,18 @@ export function TopUpRequestsTable({ requests }: { requests: TopUpRequest[] }) {
                 <TableCell className="text-right">
                   {request.status === "tertunda" ? (
                     <div className="flex gap-2 justify-end">
-                      <Button variant="ghost" size="icon" className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-100" onClick={() => handleAction(request, 'disetujui')}>
-                        <CheckCircle2 className="h-4 w-4" />
-                        <span className="sr-only">Setujui</span>
+                      <Button variant="outline" size="sm" className="text-emerald-600 border-emerald-600 hover:text-emerald-700 hover:bg-emerald-100" onClick={() => handleAction(request, 'disetujui')}>
+                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                        Setujui
                       </Button>
-                      <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive/90 hover:bg-destructive/10" onClick={() => handleAction(request, 'ditolak')}>
-                        <XCircle className="h-4 w-4" />
-                        <span className="sr-only">Tolak</span>
+                      <Button variant="outline" size="sm" className="text-destructive border-destructive hover:text-destructive/90 hover:bg-destructive/10" onClick={() => handleAction(request, 'ditolak')}>
+                        <XCircle className="h-4 w-4 mr-2" />
+                        Tolak
                       </Button>
                     </div>
                   ) : (
-                     <div className="flex items-center justify-end text-muted-foreground">
-                        {request.status === 'disetujui' ? <CheckCircle2 className="h-4 w-4 mr-2 text-emerald-600" /> : <XCircle className="h-4 w-4 mr-2 text-destructive" />}
-                        {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                     <div className="flex items-center justify-end text-muted-foreground text-xs">
+                        {`Diperbarui pada ${formatDate(request.approvalDate)}`}
                      </div>
                   )}
                 </TableCell>

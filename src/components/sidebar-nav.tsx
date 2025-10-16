@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -11,7 +12,7 @@ import {
 
 const navItems = [
   { href: "/dashboard", icon: <LayoutDashboard />, label: "Dashboard" },
-  // { href: "/top-up-requests", icon: <Coins />, label: "Verifikasi Top-Up" },
+  { href: "/top-up-requests", icon: <Coins />, label: "Verifikasi Top-Up" },
   { href: "/stores", icon: <StoreIcon />, label: "Manajemen Toko" },
   { href: "/settings", icon: <Settings />, label: "Pengaturan" },
 ];

@@ -34,6 +34,8 @@ export type TopUpRequest = {
   amount: number;
   requestDate: Timestamp | Date | string;
   status: 'tertunda' | 'disetujui' | 'ditolak';
+  approvalDate?: Timestamp | Date | string;
+  approvedBy?: string;
 };
 
 export type Transaction = {
@@ -54,5 +56,3 @@ export type PlatformOverview = {
     growthChartData: string; // JSON string
     lastUpdated: Timestamp | Date | string;
 }
-
-    

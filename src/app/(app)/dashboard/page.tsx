@@ -24,21 +24,16 @@ export default function DashboardPage() {
     firestore ? query(collection(firestore, 'platform_overviews'), limit(1)) : null, 
   [firestore]);
   
-  // Temporarily disable this query as it causes permission errors
-  // const topUpRequestsQuery = useMemoFirebase(() => 
-  //   firestore ? query(collectionGroup(firestore, 'topUpRequests'), where('status', '==', 'tertunda'), orderBy('requestDate', 'desc'), limit(5)) : null,
-  // [firestore]);
+  const topUpRequestsQuery = useMemoFirebase(() => 
+    firestore ? query(collectionGroup(firestore, 'top_up_requests'), where('status', '==', 'tertunda'), orderBy('requestDate', 'desc'), limit(5)) : null,
+  [firestore]);
 
   const recentStoresQuery = useMemoFirebase(() => 
     firestore ? query(collection(firestore, 'stores'), orderBy('createdAt', 'desc'), limit(5)) : null,
   [firestore]);
 
   const { data: overviewData, isLoading: isLoadingOverview } = useCollection<PlatformOverview>(platformOverviewQuery);
-  // Temporarily disable this hook
-  // const { data: pendingTopUps, isLoading: isLoadingTopUps } = useCollection<TopUpRequest>(topUpRequestsQuery);
-  const pendingTopUps: TopUpRequest[] = []; // Set to empty array
-  const isLoadingTopUps = false; // Set to false
-
+  const { data: pendingTopUps, isLoading: isLoadingTopUps, error: topUpsError } = useCollection<TopUpRequest>(topUpRequestsQuery);
   const { data: recentStores, isLoading: isLoadingStores } = useCollection<Store>(recentStoresQuery);
   
   const overview = overviewData?.[0];
@@ -125,16 +120,45 @@ export default function DashboardPage() {
             <CardHeader className='flex flex-row items-center justify-between'>
               <div>
                 <CardTitle className="font-headline">Verifikasi Top-up</CardTitle>
-                <CardDescription>Fitur dinonaktifkan sementara</CardDescription>
+                <CardDescription>5 permintaan terbaru</CardDescription>
               </div>
-              <Button asChild size="sm" variant="outline" disabled>
+              <Button asChild size="sm" variant="outline">
                 <Link href="/top-up-requests">Lihat Semua</Link>
               </Button>
             </CardHeader>
             <CardContent>
-              <div className="text-center text-muted-foreground py-10">
-                Fitur ini sedang dalam perbaikan.
-              </div>
+              {isLoadingTopUps ? <TableSkeleton rows={5} cols={3}/> : 
+               topUpsError ? (
+                  <div className="text-center text-muted-foreground py-10 text-sm">
+                    Gagal memuat permintaan. Mungkin perlu membuat indeks di Firestore.
+                  </div>
+               ) : (
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Nama Toko</TableHead>
+                            <TableHead>Jumlah</TableHead>
+                            <TableHead className='text-right'>Tanggal</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {pendingTopUps && pendingTopUps.length > 0 ? (
+                            pendingTopUps.map(req => (
+                                <TableRow key={req.id}>
+                                    <TableCell className='font-medium'>{req.storeName}</TableCell>
+                                    <TableCell>{formatNumber(req.amount)}</TableCell>
+                                    <TableCell className='text-right text-xs'>{formatDate(req.requestDate)}</TableCell>
+                                </TableRow>
+                            ))
+                        ) : (
+                            <TableRow>
+                                <TableCell colSpan={3} className="text-center text-muted-foreground py-10">Belum ada permintaan top-up.</TableCell>
+                            </TableRow>
+                        )}
+                    </TableBody>
+                </Table>
+               )
+              }
             </CardContent>
           </Card>
           <Card>
@@ -183,7 +207,7 @@ export default function DashboardPage() {
 
 function TableSkeleton({ rows = 5, cols = 2}: {rows?: number, cols?: number}) {
     return (
-        <div className="space-y-4">
+        <div className="space-y-4 p-4">
             {Array.from({ length: rows }).map((_, i) => (
                 <div key={i} className={`grid grid-cols-${cols} gap-4`}>
                     <Skeleton className="h-5 w-3/4" />
@@ -193,7 +217,3 @@ function TableSkeleton({ rows = 5, cols = 2}: {rows?: number, cols?: number}) {
         </div>
     )
 }
-
-    
-
-    
