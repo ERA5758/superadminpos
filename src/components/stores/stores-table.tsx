@@ -14,7 +14,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Pencil, ShieldCheck, ToggleLeft, ToggleRight, Star, PlusCircle, MinusCircle, CalendarPlus } from "lucide-react";
+import { MoreHorizontal, Pencil, ToggleLeft, ToggleRight } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,10 +22,6 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
-  DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu";
 import {
     Dialog,
@@ -42,17 +38,15 @@ import { useFirestore } from "@/firebase";
 import { doc, increment, Timestamp } from "firebase/firestore";
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { cn } from "@/lib/utils";
-import { add, format } from "date-fns";
+import { format } from "date-fns";
 
 export function StoresTable({ stores }: { stores: Store[] }) {
     const firestore = useFirestore();
     const { toast } = useToast();
 
     const [balanceDialog, setBalanceDialog] = useState(false);
-    const [premiumDialog, setPremiumDialog] = useState(false);
     const [selectedStore, setSelectedStore] = useState<Store | null>(null);
     const [adjustmentAmount, setAdjustmentAmount] = useState(0);
-    const [premiumDuration, setPremiumDuration] = useState<number | null>(null);
 
     const handleActionClick = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -63,12 +57,6 @@ export function StoresTable({ stores }: { stores: Store[] }) {
         setAdjustmentAmount(0);
         setBalanceDialog(true);
     }
-    
-    const handleOpenPremiumDialog = (store: Store, months: number) => {
-        setSelectedStore(store);
-        setPremiumDuration(months);
-        setPremiumDialog(true);
-    };
 
     const handleAdjustBalance = () => {
         if (!firestore || !selectedStore || adjustmentAmount === 0 || isNaN(adjustmentAmount)) {
@@ -88,59 +76,6 @@ export function StoresTable({ stores }: { stores: Store[] }) {
 
         setBalanceDialog(false);
         setSelectedStore(null);
-    }
-
-    const handleSetPremium = () => {
-        if (!firestore || !selectedStore || !premiumDuration) {
-            setPremiumDialog(false);
-            return;
-        }
-
-        const storeRef = doc(firestore, "stores", selectedStore.id);
-
-        let currentExpiry: Date;
-        if (selectedStore.catalogSubscriptionExpiry) {
-            // If expiry is a Firestore Timestamp, convert it to a Date
-            if (selectedStore.catalogSubscriptionExpiry instanceof Timestamp) {
-                currentExpiry = selectedStore.catalogSubscriptionExpiry.toDate();
-            } else {
-                // Otherwise, assume it's a string or Date object
-                currentExpiry = new Date(selectedStore.catalogSubscriptionExpiry as any);
-            }
-            // Check if current expiry is in the past, if so, start from now
-            if (currentExpiry < new Date()) {
-                currentExpiry = new Date();
-            }
-        } else {
-            currentExpiry = new Date();
-        }
-        
-        const newExpiryDate = add(currentExpiry, { months: premiumDuration });
-
-        updateDocumentNonBlocking(storeRef, {
-            catalogSubscriptionExpiry: Timestamp.fromDate(newExpiryDate)
-        });
-
-        toast({
-            title: "Langganan Premium Diperbarui",
-            description: `${selectedStore.name} sekarang premium hingga ${format(newExpiryDate, 'd MMMM yyyy')}.`,
-        });
-        
-        setPremiumDialog(false);
-        setSelectedStore(null);
-        setPremiumDuration(null);
-    }
-
-    const handleStopPremium = (store: Store) => {
-         if (!firestore) return;
-        const storeRef = doc(firestore, "stores", store.id);
-        updateDocumentNonBlocking(storeRef, { 
-            catalogSubscriptionExpiry: null
-        });
-        toast({
-            title: `Langganan Premium Dihentikan`,
-            description: `Langganan premium untuk ${store.name} telah dihentikan.`,
-        });
     }
 
     const handleToggleActive = (store: Store) => {
@@ -218,36 +153,6 @@ export function StoresTable({ stores }: { stores: Store[] }) {
                                 Sesuaikan Saldo Token
                             </DropdownMenuItem>
                             
-                            <DropdownMenuSub>
-                                <DropdownMenuSubTrigger>
-                                    <Star className="mr-2 h-4 w-4" />
-                                    <span>Kelola Premium</span>
-                                </DropdownMenuSubTrigger>
-                                <DropdownMenuPortal>
-                                    <DropdownMenuSubContent>
-                                        <DropdownMenuItem onClick={() => handleOpenPremiumDialog(store, 1)}>
-                                            <PlusCircle className="mr-2 h-4 w-4" />
-                                            <span>Tambah 1 Bulan</span>
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => handleOpenPremiumDialog(store, 6)}>
-                                            <PlusCircle className="mr-2 h-4 w-4" />
-                                            <span>Tambah 6 Bulan</span>
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => handleOpenPremiumDialog(store, 12)}>
-                                            <PlusCircle className="mr-2 h-4 w-4" />
-                                            <span>Tambah 1 Tahun</span>
-                                        </DropdownMenuItem>
-                                        {premium && <>
-                                            <DropdownMenuSeparator />
-                                            <DropdownMenuItem onClick={() => handleStopPremium(store)} className="text-destructive focus:text-destructive">
-                                                <MinusCircle className="mr-2 h-4 w-4" />
-                                                <span>Hentikan Langganan</span>
-                                            </DropdownMenuItem>
-                                        </>}
-                                    </DropdownMenuSubContent>
-                                </DropdownMenuPortal>
-                            </DropdownMenuSub>
-
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => handleToggleActive(store)} className={!store.isActive ? 'text-emerald-600 focus:text-emerald-600' : 'text-destructive focus:text-destructive'}>
                                 {store.isActive ? <ToggleLeft className="mr-2 h-4 w-4" /> : <ToggleRight className="mr-2 h-4 w-4" />}
@@ -305,24 +210,6 @@ export function StoresTable({ stores }: { stores: Store[] }) {
         </DialogContent>
     </Dialog>
     
-    <Dialog open={premiumDialog} onOpenChange={setPremiumDialog}>
-        <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-                <DialogTitle className="font-headline">Konfirmasi Langganan Premium</DialogTitle>
-                <DialogDescription>
-                    Anda akan memperpanjang langganan premium untuk <strong>{selectedStore?.name}</strong> selama <strong>{premiumDuration} bulan</strong>.
-                </DialogDescription>
-            </DialogHeader>
-             <div className="space-y-2 text-sm">
-                <p>Tanggal kedaluwarsa saat ini: {selectedStore?.catalogSubscriptionExpiry ? format((selectedStore.catalogSubscriptionExpiry as Timestamp).toDate(), 'd MMMM yyyy') : 'Tidak ada'}</p>
-                <p>Tanggal kedaluwarsa baru akan menjadi: <strong>{premiumDuration && selectedStore ? format(add(isStorePremium(selectedStore) ? (selectedStore.catalogSubscriptionExpiry as Timestamp).toDate() : new Date(), { months: premiumDuration }), 'd MMMM yyyy') : '...'}</strong></p>
-            </div>
-            <DialogFooter>
-                <Button variant="secondary" onClick={() => setPremiumDialog(false)}>Batal</Button>
-                <Button onClick={handleSetPremium}>Konfirmasi dan Simpan</Button>
-            </DialogFooter>
-        </DialogContent>
-    </Dialog>
     </>
   );
 
