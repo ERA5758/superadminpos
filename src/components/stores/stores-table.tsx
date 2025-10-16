@@ -99,13 +99,13 @@ export function StoresTable({ stores }: { stores: Store[] }) {
         const storeRef = doc(firestore, "stores", selectedStore.id);
 
         let currentExpiry: Date;
-        if (selectedStore.premiumCatalogSubscriptionExpiry) {
+        if (selectedStore.catalogSubscriptionExpiry) {
             // If expiry is a Firestore Timestamp, convert it to a Date
-            if (selectedStore.premiumCatalogSubscriptionExpiry instanceof Timestamp) {
-                currentExpiry = selectedStore.premiumCatalogSubscriptionExpiry.toDate();
+            if (selectedStore.catalogSubscriptionExpiry instanceof Timestamp) {
+                currentExpiry = selectedStore.catalogSubscriptionExpiry.toDate();
             } else {
                 // Otherwise, assume it's a string or Date object
-                currentExpiry = new Date(selectedStore.premiumCatalogSubscriptionExpiry as any);
+                currentExpiry = new Date(selectedStore.catalogSubscriptionExpiry as any);
             }
             // Check if current expiry is in the past, if so, start from now
             if (currentExpiry < new Date()) {
@@ -118,7 +118,7 @@ export function StoresTable({ stores }: { stores: Store[] }) {
         const newExpiryDate = add(currentExpiry, { months: premiumDuration });
 
         updateDocumentNonBlocking(storeRef, {
-            premiumCatalogSubscriptionExpiry: Timestamp.fromDate(newExpiryDate)
+            catalogSubscriptionExpiry: Timestamp.fromDate(newExpiryDate)
         });
 
         toast({
@@ -135,7 +135,7 @@ export function StoresTable({ stores }: { stores: Store[] }) {
          if (!firestore) return;
         const storeRef = doc(firestore, "stores", store.id);
         updateDocumentNonBlocking(storeRef, { 
-            premiumCatalogSubscriptionExpiry: null
+            catalogSubscriptionExpiry: null
         });
         toast({
             title: `Langganan Premium Dihentikan`,
@@ -155,11 +155,11 @@ export function StoresTable({ stores }: { stores: Store[] }) {
     }
     
     const isStorePremium = (store: Store): boolean => {
-        if (!store.premiumCatalogSubscriptionExpiry) return false;
+        if (!store.catalogSubscriptionExpiry) return false;
         // Ensure we can handle Timestamps from Firestore and Date objects
-        const expiryDate = store.premiumCatalogSubscriptionExpiry instanceof Timestamp 
-            ? store.premiumCatalogSubscriptionExpiry.toDate()
-            : new Date(store.premiumCatalogSubscriptionExpiry);
+        const expiryDate = store.catalogSubscriptionExpiry instanceof Timestamp 
+            ? store.catalogSubscriptionExpiry.toDate()
+            : new Date(store.catalogSubscriptionExpiry);
         return expiryDate > new Date();
     }
 
@@ -314,8 +314,8 @@ export function StoresTable({ stores }: { stores: Store[] }) {
                 </DialogDescription>
             </DialogHeader>
              <div className="space-y-2 text-sm">
-                <p>Tanggal kedaluwarsa saat ini: {selectedStore?.premiumCatalogSubscriptionExpiry ? format((selectedStore.premiumCatalogSubscriptionExpiry as Timestamp).toDate(), 'd MMMM yyyy') : 'Tidak ada'}</p>
-                <p>Tanggal kedaluwarsa baru akan menjadi: <strong>{premiumDuration && selectedStore ? format(add(isStorePremium(selectedStore) ? (selectedStore.premiumCatalogSubscriptionExpiry as Timestamp).toDate() : new Date(), { months: premiumDuration }), 'd MMMM yyyy') : '...'}</strong></p>
+                <p>Tanggal kedaluwarsa saat ini: {selectedStore?.catalogSubscriptionExpiry ? format((selectedStore.catalogSubscriptionExpiry as Timestamp).toDate(), 'd MMMM yyyy') : 'Tidak ada'}</p>
+                <p>Tanggal kedaluwarsa baru akan menjadi: <strong>{premiumDuration && selectedStore ? format(add(isStorePremium(selectedStore) ? (selectedStore.catalogSubscriptionExpiry as Timestamp).toDate() : new Date(), { months: premiumDuration }), 'd MMMM yyyy') : '...'}</strong></p>
             </div>
             <DialogFooter>
                 <Button variant="secondary" onClick={() => setPremiumDialog(false)}>Batal</Button>
@@ -327,6 +327,8 @@ export function StoresTable({ stores }: { stores: Store[] }) {
   );
 
 }
+
+    
 
     
 

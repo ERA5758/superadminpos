@@ -5,7 +5,7 @@ export type Store = {
   name: string;
   isActive: boolean;
   pradanaTokenBalance: number;
-  premiumCatalogSubscriptionExpiry?: Timestamp | Date | string | null;
+  catalogSubscriptionExpiry?: Timestamp | Date | string | null;
   createdAt: Timestamp | Date | string;
   referralCode?: string;
   // These fields will now be populated from the UserProfile
@@ -63,3 +63,5 @@ export type ReferralCode = {
   isActive: boolean;
   createdAt: Timestamp | Date | string;
 };
+
+    
