@@ -30,7 +30,7 @@ export type TopUpRequest = {
   id: string;
   storeId: string;
   storeName:string;
-  amount: number;
+  tokensToAdd: number;
   requestedAt: Timestamp | Date | string;
   status: 'pending' | 'disetujui' | 'ditolak';
   approvalDate?: Timestamp | Date | string;
@@ -42,7 +42,7 @@ export type Transaction = {
   id: string;
   storeId: string;
   type: 'pos' | 'ai' | 'topup';
-  amount: number; // The number of tokens transacted
+  tokensTransacted: number; // The number of tokens transacted
   createdAt: Timestamp;
   description: string; // e.g., "AI Business Plan Usage", "POS Transaction Fee"
 };
@@ -64,4 +64,5 @@ export type ReferralCode = {
   createdAt: Timestamp | Date | string;
 };
 
+    
     

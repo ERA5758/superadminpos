@@ -65,14 +65,14 @@ export default function DashboardPage() {
       // Calculate total token usage (POS + AI)
       const calculatedTransactions = transactions
         .filter(t => t.type === 'pos' || t.type === 'ai')
-        .reduce((acc, t) => acc + Math.abs(t.amount || 0), 0); // Use Math.abs for usage
+        .reduce((acc, t) => acc + Math.abs(t.tokensTransacted || 0), 0); // Use Math.abs for usage
       setTotalTransactions(calculatedTransactions);
     }
   }, [transactions]);
   
   useEffect(() => {
     if (approvedTopUps) {
-        const calculatedRevenue = approvedTopUps.reduce((acc, req) => acc + (req.amount || 0), 0);
+        const calculatedRevenue = approvedTopUps.reduce((acc, req) => acc + (req.tokensToAdd || 0), 0);
         setTotalRevenue(calculatedRevenue);
     }
   }, [approvedTopUps]);
@@ -123,7 +123,7 @@ export default function DashboardPage() {
           const month = getMonth(approvalDate);
           const key = `${year}-${month}`;
           if (key in monthlyData) {
-            monthlyData[key].totalTopUp += req.amount;
+            monthlyData[key].totalTopUp += req.tokensToAdd;
           }
         }
       });
@@ -250,7 +250,7 @@ export default function DashboardPage() {
                             pendingTopUps.map(req => (
                                 <TableRow key={req.id}>
                                     <TableCell className='font-medium'>{req.storeName}</TableCell>
-                                    <TableCell>{formatCurrency(req.amount)}</TableCell>
+                                    <TableCell>{formatCurrency(req.tokensToAdd)}</TableCell>
                                     <TableCell className='text-right text-xs'>{formatDate(req.requestedAt)}</TableCell>
                                 </TableRow>
                             ))
@@ -324,4 +324,5 @@ function TableSkeleton({ rows = 5, cols = 2}: {rows?: number, cols?: number}) {
 
     
 
+    
     

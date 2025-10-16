@@ -91,7 +91,7 @@
           "type": "string",
           "description": "Reference to Store. (Relationship: Store 1:N TopUpRequest)"
         },
-        "amount": {
+        "tokensToAdd": {
           "type": "number",
           "description": "Amount of Pradana Tokens requested."
         },
@@ -125,7 +125,7 @@
       "required": [
         "id",
         "storeId",
-        "amount",
+        "tokensToAdd",
         "requestedAt",
         "status"
       ]
@@ -145,7 +145,7 @@
           "description": "The type of transaction.",
           "enum": ["pos", "ai", "topup"]
         },
-        "amount": {
+        "tokensTransacted": {
           "type": "number",
           "description": "The number of tokens involved in the transaction. Positive for additions (top-up), negative for subtractions (usage)."
         },
@@ -159,7 +159,7 @@
           "description": "A brief description of the transaction (e.g., 'POS Transaction Fee', 'AI Business Plan Usage')."
         }
       },
-      "required": ["storeId", "type", "amount", "createdAt", "description"]
+      "required": ["storeId", "type", "tokensTransacted", "createdAt", "description"]
     },
     "Store": {
       "$schema": "http://json-schema.org/draft-07/schema#",

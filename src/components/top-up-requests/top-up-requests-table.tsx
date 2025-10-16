@@ -53,14 +53,14 @@ export function TopUpRequestsTable({ requests }: { requests: TopUpRequest[] }) {
         // If approved, update the store's token balance and create a transaction log
         if (action === 'disetujui') {
             const storeRef = doc(firestore, "stores", request.storeId);
-            batch.update(storeRef, { pradanaTokenBalance: increment(request.amount) });
+            batch.update(storeRef, { pradanaTokenBalance: increment(request.tokensToAdd) });
             
             // Create a new transaction log for the top-up
             const transactionRef = doc(collection(firestore, "transactions"));
             batch.set(transactionRef, {
               storeId: request.storeId,
               type: 'topup',
-              amount: request.amount,
+              tokensTransacted: request.tokensToAdd,
               createdAt: Timestamp.now(),
               description: `Top-up disetujui untuk ${request.storeName}`
             });
@@ -118,7 +118,7 @@ export function TopUpRequestsTable({ requests }: { requests: TopUpRequest[] }) {
               <TableRow key={request.id}>
                 <TableCell className="font-medium">{request.storeName}</TableCell>
                 <TableCell>
-                  {formatNumber(request.amount)}
+                  {formatNumber(request.tokensToAdd)}
                 </TableCell>
                 <TableCell>{formatDate(request.requestedAt)}</TableCell>
                  <TableCell>

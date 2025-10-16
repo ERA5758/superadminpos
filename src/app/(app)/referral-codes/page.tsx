@@ -79,7 +79,7 @@ export default function ReferralCodesPage() {
     // 3. Create a map of total top-up amounts per store ID
     const topUpAmountByStore: { [key: string]: number } = {};
     for (const topUp of filteredTopUps) {
-        topUpAmountByStore[topUp.storeId] = (topUpAmountByStore[topUp.storeId] || 0) + topUp.amount;
+        topUpAmountByStore[topUp.storeId] = (topUpAmountByStore[topUp.storeId] || 0) + topUp.tokensToAdd;
     }
 
     // 4. Aggregate data for each referral code
