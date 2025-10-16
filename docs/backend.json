@@ -325,7 +325,7 @@
       {
         "path": "/appSettings/{docId}",
         "definition": {
-          "description": "Stores global application settings as individual documents (e.g., 'transactionFees', 'bankAccount'). Accessible only to superadmins."
+          "description": "Stores global application settings as individual documents (e.g., 'transactionFees', 'bankAccount', 'whatsappConfig'). Accessible only to superadmins."
         }
       },
       {

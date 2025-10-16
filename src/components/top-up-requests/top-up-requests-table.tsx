@@ -18,7 +18,7 @@ import { CheckCircle2, XCircle, Link as LinkIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useFirestore } from "@/firebase";
-import { doc, increment, writeBatch, Timestamp, collection, addDoc } from "firebase/firestore";
+import { doc, increment, writeBatch, Timestamp, collection } from "firebase/firestore";
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import Link from 'next/link';

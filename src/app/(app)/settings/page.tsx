@@ -34,7 +34,7 @@ type FeeSettings = {
     catalogSixMonthFee: number;
     catalogYearlyFee: number;
     aiBusinessPlanFee: number;
-aiSessionDurationMinutes: number;
+    aiSessionDurationMinutes: number;
     aiSessionFee: number;
     tokenValueRp: number;
 };
@@ -67,7 +67,7 @@ const defaultSettings: SettingsData = {
         catalogSixMonthFee: 0,
         catalogYearlyFee: 0,
         aiBusinessPlanFee: 0,
-aiSessionDurationMinutes: 0,
+        aiSessionDurationMinutes: 0,
         aiSessionFee: 0,
         tokenValueRp: 1,
     },
