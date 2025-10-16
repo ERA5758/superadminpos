@@ -4,21 +4,17 @@
 import { useState, useEffect } from 'react';
 import { Banknote, WalletCards, Building2, Users } from 'lucide-react';
 import { StatCard } from '@/components/stat-card';
-import { RevenueChart } from '@/components/dashboard/revenue-chart';
+import { GrowthChart } from '@/components/dashboard/growth-chart';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { format } from 'date-fns';
+import { format, subMonths, getMonth, getYear } from 'date-fns';
 import { id } from 'date-fns/locale';
 import { useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, where, orderBy, limit, Timestamp, doc } from 'firebase/firestore';
 import type { Store, TopUpRequest, Transaction } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
-
-type FeeSettings = {
-    growthChartData?: string;
-};
 
 export default function DashboardPage() {
   const firestore = useFirestore();
@@ -26,12 +22,10 @@ export default function DashboardPage() {
   const [totalTokenBalance, setTotalTokenBalance] = useState(0);
   const [totalTransactions, setTotalTransactions] = useState(0);
   const [totalRevenue, setTotalRevenue] = useState(0);
+  const [growthChartData, setGrowthChartData] = useState([]);
+
 
   // --- Data Fetching ---
-  const settingsDocRef = useMemoFirebase(() => 
-    firestore ? doc(firestore, 'appSettings', 'transactionFees') : null,
-  [firestore]);
-
   const storesQuery = useMemoFirebase(() =>
     firestore ? collection(firestore, 'stores') : null,
   [firestore]);
@@ -52,7 +46,6 @@ export default function DashboardPage() {
     firestore ? query(collection(firestore, 'stores'), orderBy('name', 'desc'), limit(5)) : null,
   [firestore]);
 
-  const { data: settingsData, isLoading: isLoadingSettings } = useDoc<FeeSettings>(settingsDocRef);
   const { data: stores, isLoading: isLoadingStores } = useCollection<Store>(storesQuery);
   const { data: transactions, isLoading: isLoadingTransactions } = useCollection<Transaction>(transactionsQuery);
   const { data: pendingTopUps, isLoading: isLoadingTopUps, error: topUpsError } = useCollection<TopUpRequest>(topUpRequestsQuery);
@@ -84,7 +77,67 @@ export default function DashboardPage() {
     }
   }, [approvedTopUps]);
 
-  const growthChartData = settingsData?.growthChartData ? JSON.parse(settingsData.growthChartData) : [];
+  // --- Growth Chart Data Calculation ---
+  useEffect(() => {
+    if (stores && approvedTopUps) {
+      const getSafeDate = (date: Timestamp | Date | string | undefined): Date | null => {
+        if (!date) return null;
+        try {
+          return date instanceof Timestamp ? date.toDate() : new Date(date);
+        } catch (e) {
+          return null;
+        }
+      };
+
+      const monthlyData: { [key: string]: { newStores: number; totalTopUp: number } } = {};
+      const monthLabels: { [key: string]: string } = {};
+      
+      // Initialize last 12 months
+      for (let i = 11; i >= 0; i--) {
+        const d = subMonths(new Date(), i);
+        const year = getYear(d);
+        const month = getMonth(d);
+        const key = `${year}-${month}`;
+        monthlyData[key] = { newStores: 0, totalTopUp: 0 };
+        monthLabels[key] = format(d, 'MMM', { locale: id });
+      }
+      
+      // Process new stores
+      stores.forEach(store => {
+        const createdAt = getSafeDate(store.createdAt);
+        if (createdAt) {
+          const year = getYear(createdAt);
+          const month = getMonth(createdAt);
+          const key = `${year}-${month}`;
+          if (key in monthlyData) {
+            monthlyData[key].newStores++;
+          }
+        }
+      });
+      
+      // Process approved top-ups
+      approvedTopUps.forEach(req => {
+        const approvalDate = getSafeDate(req.approvalDate);
+        if (approvalDate) {
+          const year = getYear(approvalDate);
+          const month = getMonth(approvalDate);
+          const key = `${year}-${month}`;
+          if (key in monthlyData) {
+            monthlyData[key].totalTopUp += req.amount;
+          }
+        }
+      });
+
+      const chartData = Object.keys(monthlyData).map(key => ({
+        month: monthLabels[key],
+        ...monthlyData[key]
+      }));
+
+      setGrowthChartData(chartData as any);
+    }
+  }, [stores, approvedTopUps]);
+
+
   const totalStores = stores?.length ?? 0;
 
   // --- Formatting Functions ---
@@ -157,14 +210,14 @@ export default function DashboardPage() {
         />
         <StatCard
           title="Total Pendapatan"
-          value={isLoadingApprovedTopUps ? <Skeleton className='h-7 w-28'/> : formatNumber(totalRevenue)}
+          value={isLoadingApprovedTopUps ? <Skeleton className='h-7 w-28'/> : formatCurrency(totalRevenue)}
           icon={Banknote}
           description="Total dari semua top-up"
         />
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         <div className="lg:col-span-3">
-          <RevenueChart data={growthChartData} />
+          <GrowthChart data={growthChartData} />
         </div>
         <div className="lg:col-span-2 flex flex-col gap-6">
           <Card>
@@ -197,7 +250,7 @@ export default function DashboardPage() {
                             pendingTopUps.map(req => (
                                 <TableRow key={req.id}>
                                     <TableCell className='font-medium'>{req.storeName}</TableCell>
-                                    <TableCell>{formatNumber(req.amount)}</TableCell>
+                                    <TableCell>{formatCurrency(req.amount)}</TableCell>
                                     <TableCell className='text-right text-xs'>{formatDate(req.requestDate)}</TableCell>
                                 </TableRow>
                             ))
