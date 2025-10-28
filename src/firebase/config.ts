@@ -1,8 +1,9 @@
 export const firebaseConfig = {
-  "projectId": "kasir-pos-chika-toko-354-1abce",
-  "appId": "1:582069956448:web:4c901ec70a1afe08837805",
-  "apiKey": "AIzaSyAT7g9niddpksmzpOhcz6g8dtWnq5Vd6ms",
-  "authDomain": "kasir-pos-chika-toko-354-1abce.firebaseapp.com",
-  "measurementId": "",
-  "messagingSenderId": "582069956448"
+  apiKey: "AIzaSyDXQfolYUnz8n2vg6TVJRG5GG6wCDQFQZo",
+  authDomain: "gen-lang-client-0974184526.firebaseapp.com",
+  projectId: "gen-lang-client-0974184526",
+  storageBucket: "gen-lang-client-0974184526.appspot.com",
+  messagingSenderId: "743499275827",
+  appId: "1:743499275827:web:7358ddd7c0d346ae714d46",
+  measurementId: "G-8PVW9YS5BT"
 };
