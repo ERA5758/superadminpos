@@ -41,8 +41,8 @@ type FeeSettings = {
 };
 
 type NotificationSettings = {
-    waDeviceId: string;
-    waAdminGroup: string;
+    deviceId: string;
+    adminGroup: string;
 }
 
 type SettingsData = {
@@ -73,8 +73,8 @@ const defaultSettings: SettingsData = {
         tokenValueRp: 1,
     },
     notificationSettings: {
-        waDeviceId: "",
-        waAdminGroup: "",
+        deviceId: "",
+        adminGroup: "",
     }
 };
 
@@ -348,13 +348,13 @@ export default function SettingsPage() {
         <CardContent>
             <div className="space-y-4 max-w-md">
                 <div className="space-y-2">
-                    <Label htmlFor="waDeviceId">Device ID WhatsApp</Label>
-                    <Input id="waDeviceId" value={settings.notificationSettings.waDeviceId} onChange={handleInputChange('notificationSettings', 'waDeviceId')} />
+                    <Label htmlFor="deviceId">Device ID WhatsApp</Label>
+                    <Input id="deviceId" value={settings.notificationSettings.deviceId} onChange={handleInputChange('notificationSettings', 'deviceId')} />
                     <p className="text-sm text-muted-foreground">ID unik dari perangkat yang terhubung ke gateway WhatsApp Anda.</p>
                 </div>
                 <div className="space-y-2">
-                    <Label htmlFor="waAdminGroup">Grup Admin WhatsApp</Label>
-                    <Input id="waAdminGroup" value={settings.notificationSettings.waAdminGroup} onChange={handleInputChange('notificationSettings', 'waAdminGroup')} />
+                    <Label htmlFor="adminGroup">Grup Admin WhatsApp</Label>
+                    <Input id="adminGroup" value={settings.notificationSettings.adminGroup} onChange={handleInputChange('notificationSettings', 'adminGroup')} />
                     <p className="text-sm text-muted-foreground">Nomor atau ID grup WhatsApp yang akan menerima notifikasi.</p>
                 </div>
             </div>
