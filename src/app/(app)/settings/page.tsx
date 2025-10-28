@@ -36,6 +36,7 @@ type FeeSettings = {
     aiBusinessPlanFee: number;
     aiSessionDurationMinutes: number;
     aiSessionFee: number;
+
     tokenValueRp: number;
 };
 
@@ -341,18 +342,20 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle className="font-headline">Konfigurasi Notifikasi</CardTitle>
           <CardDescription>
-            Kelola konfigurasi untuk notifikasi, mis. WhatsApp.
+            Kelola konfigurasi untuk notifikasi, mis. WhatsApp. Backend (Cloud Function) diperlukan untuk mengirim notifikasi.
           </CardDescription>
         </CardHeader>
         <CardContent>
             <div className="space-y-4 max-w-md">
                 <div className="space-y-2">
-                <Label htmlFor="waDeviceId">Device ID WhatsApp</Label>
-                <Input id="waDeviceId" value={settings.notificationSettings.waDeviceId} onChange={handleInputChange('notificationSettings', 'waDeviceId')} />
+                    <Label htmlFor="waDeviceId">Device ID WhatsApp</Label>
+                    <Input id="waDeviceId" value={settings.notificationSettings.waDeviceId} onChange={handleInputChange('notificationSettings', 'waDeviceId')} />
+                    <p className="text-sm text-muted-foreground">ID unik dari perangkat yang terhubung ke gateway WhatsApp Anda.</p>
                 </div>
                 <div className="space-y-2">
-                <Label htmlFor="waAdminGroup">Grup Admin WhatsApp</Label>
-                <Input id="waAdminGroup" value={settings.notificationSettings.waAdminGroup} onChange={handleInputChange('notificationSettings', 'waAdminGroup')} />
+                    <Label htmlFor="waAdminGroup">Grup Admin WhatsApp</Label>
+                    <Input id="waAdminGroup" value={settings.notificationSettings.waAdminGroup} onChange={handleInputChange('notificationSettings', 'waAdminGroup')} />
+                    <p className="text-sm text-muted-foreground">Nomor atau ID grup WhatsApp yang akan menerima notifikasi.</p>
                 </div>
             </div>
         </CardContent>
