@@ -19,8 +19,8 @@ interface WhatsappSettings {
 
 /**
  * Fetches WhatsApp settings. 
- * If storeId is 'platform', it fetches global settings.
- * Otherwise, it fetches store-specific settings.
+ * If storeId is 'platform', it fetches global settings from appSettings.
+ * Otherwise, it fetches store-specific settings (if any).
  */
 async function getWhatsappSettings(storeId: string = 'platform'): Promise<WhatsappSettings> {
   const defaultSettings: WhatsappSettings = { deviceId: '', adminGroup: '' };
@@ -29,7 +29,8 @@ async function getWhatsappSettings(storeId: string = 'platform'): Promise<Whatsa
   if (storeId === 'platform') {
       settingsDocRef = db.collection('appSettings').doc('whatsappConfig');
   } else {
-      settingsDocRef = db.collection('stores').doc(storeId).collection('settings').doc('whatsapp');
+      // Fallback to platform settings if store-specific settings are not the primary goal for this function.
+      settingsDocRef = db.collection('appSettings').doc('whatsappConfig');
   }
 
   try {
@@ -116,7 +117,7 @@ export const onTopUpRequestCreate = onDocumentCreated("topUpRequests/{requestId}
     }
 
     const requestData = snapshot.data();
-    const { storeId, storeName, tokensToAdd } = requestData;
+    const { storeId, storeName, tokensToAdd, proofUrl, userName } = requestData;
 
     if (!storeId || !storeName) {
         logger.error("Top-up request is missing 'storeId' or 'storeName'.", { id: snapshot.id });
@@ -135,13 +136,13 @@ export const onTopUpRequestCreate = onDocumentCreated("topUpRequests/{requestId}
 
         // 2. Send notification to admin group
         const formattedAmount = (tokensToAdd || 0).toLocaleString('id-ID');
-        const adminMessage = `🔔 *Permintaan Top-up Baru*\n\nToko: *${storeName}*\nJumlah: *${formattedAmount} token*\n\nMohon segera verifikasi di konsol admin.`;
+        const adminMessage = `🔔 *Permintaan Top-up Baru*\n\nToko: *${storeName}*\nPengaju: *${userName || 'N/A'}*\nJumlah: *${formattedAmount} token*\n\nMohon segera verifikasi di konsol admin.\nBukti: ${proofUrl || 'Tidak ada'}`;
         
         await whatsappQueueRef.add({
             to: 'admin_group',
             message: adminMessage,
             isGroup: true,
-            storeId: 'platform', // Use platform settings
+            storeId: 'platform', // Use platform settings for admin notifications
             createdAt: FieldValue.serverTimestamp(),
         });
         logger.info(`Queued new top-up request notification for admin group.`);
@@ -153,23 +154,23 @@ export const onTopUpRequestCreate = onDocumentCreated("topUpRequests/{requestId}
 
 /**
  * Handles logic when a top-up request is updated (approved/rejected).
- * Sends notifications to the customer and admin group.
+ * Sends notifications to the customer and admin group via whatsappQueue.
  */
 export const onTopUpRequestUpdate = onDocumentUpdated("topUpRequests/{requestId}", async (event) => {
   const before = event.data?.before.data();
   const after = event.data?.after.data();
 
   if (!before || !after) {
-    logger.info("No data change detected, exiting.");
+    logger.info("No data change detected in onTopUpRequestUpdate, exiting.");
     return;
   }
 
-  // Proceed only if the status has changed
-  if (before.status === after.status) {
+  // Proceed only if the status has changed from pending to something else.
+  if (before.status !== 'pending' || before.status === after.status) {
     return;
   }
   
-  const { storeId, storeName, status, tokensToAdd, userId, userName } = after;
+  const { storeId, storeName, status, tokensToAdd, userId } = after;
   const requestId = event.params.requestId;
 
   if (!storeId || !storeName) {
@@ -177,31 +178,24 @@ export const onTopUpRequestUpdate = onDocumentUpdated("topUpRequests/{requestId}
     return;
   }
 
-  // --- Sync data to store's subcollection regardless of status ---
-  const historyRef = db.collection('stores').doc(storeId).collection('topUpRequests').doc(requestId);
-  try {
-      await historyRef.set(after, { merge: true });
-      logger.info(`Synced update for request ${requestId} to store ${storeId}. New status: ${status}`);
-  } catch(error) {
-      logger.error(`Failed to sync update for request ${requestId} to store ${storeId}:`, error);
-  }
-  // --- End of Sync ---
-
   const whatsappQueueRef = db.collection('whatsappQueue');
   const formattedAmount = (tokensToAdd || 0).toLocaleString('id-ID');
   
-  // Get customer's WhatsApp number from their user profile
+  // Get customer's WhatsApp number and name from their user profile
   let customerWhatsapp = '';
-  let customerName = userName || 'Pelanggan';
+  let customerName = after.userName || 'Pelanggan';
 
   if (userId) {
-      const userDoc = await db.collection('users').doc(userId).get();
-      if (userDoc.exists) {
-          customerWhatsapp = userDoc.data()?.whatsapp || '';
-          customerName = userDoc.data()?.name || customerName;
+      try {
+        const userDoc = await db.collection('users').doc(userId).get();
+        if (userDoc.exists) {
+            customerWhatsapp = userDoc.data()?.whatsapp || '';
+            customerName = userDoc.data()?.name || customerName;
+        }
+      } catch (userError) {
+          logger.error(`Could not fetch user document for UID ${userId}:`, userError);
       }
   }
-
 
   let customerMessage = '';
   let adminMessage = '';
@@ -213,7 +207,7 @@ export const onTopUpRequestUpdate = onDocumentUpdated("topUpRequests/{requestId}
       customerMessage = `❌ *Top-up Ditolak*\n\nHalo ${customerName},\nMohon maaf, permintaan top-up Anda untuk toko *${storeName}* sejumlah ${formattedAmount} token telah ditolak.\n\nSilakan periksa bukti transfer Anda dan coba lagi, atau hubungi admin jika ada pertanyaan.`;
       adminMessage = `❌ *Top-up Ditolak*\n\nPermintaan dari: *${storeName}*\nJumlah: *${formattedAmount} token*\n\nStatus berhasil diperbarui. Tidak ada perubahan pada saldo toko.`;
   } else {
-      // Do nothing for other status changes like 'pending'
+      // Do nothing for other status changes
       return;
   }
 
@@ -229,7 +223,7 @@ export const onTopUpRequestUpdate = onDocumentUpdated("topUpRequests/{requestId}
           });
           logger.info(`Queued '${status}' notification for customer ${customerName} of store ${storeId}`);
       } else {
-          logger.warn(`User ${userId} for store ${storeId} does not have a WhatsApp number.`);
+          logger.warn(`User ${userId} for store ${storeId} does not have a WhatsApp number. Cannot send notification.`);
       }
 
       // Queue notification for admin group
@@ -240,7 +234,7 @@ export const onTopUpRequestUpdate = onDocumentUpdated("topUpRequests/{requestId}
           storeId: 'platform', // Use platform settings
           createdAt: FieldValue.serverTimestamp(),
       });
-      logger.info(`Queued '${status}' notification for admin group.`);
+      logger.info(`Queued '${status}' notification for admin group for request from ${storeName}.`);
 
   } catch (error) {
       logger.error(`Failed to queue notifications for request ${requestId}:`, error);
@@ -329,5 +323,3 @@ export const sendDailySalesSummary = onSchedule({
   
   
   
-
-    
