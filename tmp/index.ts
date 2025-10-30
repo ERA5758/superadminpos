@@ -169,7 +169,7 @@ export const onTopUpRequestUpdate = onDocumentUpdated("topUpRequests/{requestId}
     return;
   }
   
-  const { storeId, storeName, status, tokensToAdd } = after;
+  const { storeId, storeName, status, tokensToAdd, userId, userName } = after;
   const requestId = event.params.requestId;
 
   if (!storeId || !storeName) {
@@ -191,16 +191,17 @@ export const onTopUpRequestUpdate = onDocumentUpdated("topUpRequests/{requestId}
   const formattedAmount = (tokensToAdd || 0).toLocaleString('id-ID');
   
   // Get customer's WhatsApp number from their user profile
-  // Assuming store has adminUids array, we take the first one.
-  const storeDoc = await db.collection('stores').doc(storeId).get();
-  const adminUids = storeDoc.data()?.adminUids;
-  if (!adminUids || adminUids.length === 0) {
-      logger.warn(`Store ${storeId} has no adminUids. Cannot send customer notification.`);
-      return;
+  let customerWhatsapp = '';
+  let customerName = userName || 'Pelanggan';
+
+  if (userId) {
+      const userDoc = await db.collection('users').doc(userId).get();
+      if (userDoc.exists) {
+          customerWhatsapp = userDoc.data()?.whatsapp || '';
+          customerName = userDoc.data()?.name || customerName;
+      }
   }
-  const userDoc = await db.collection('users').doc(adminUids[0]).get();
-  const customerWhatsapp = userDoc.data()?.whatsapp;
-  const customerName = userDoc.data()?.name || 'Pelanggan';
+
 
   let customerMessage = '';
   let adminMessage = '';
@@ -223,12 +224,12 @@ export const onTopUpRequestUpdate = onDocumentUpdated("topUpRequests/{requestId}
           await whatsappQueueRef.add({
               to: formattedPhone,
               message: customerMessage,
-              storeId: storeId, // Use store-specific settings if available
+              storeId: 'platform', // Use platform settings for sending to customer
               createdAt: FieldValue.serverTimestamp(),
           });
           logger.info(`Queued '${status}' notification for customer ${customerName} of store ${storeId}`);
       } else {
-          logger.warn(`User ${adminUids[0]} for store ${storeId} does not have a WhatsApp number.`);
+          logger.warn(`User ${userId} for store ${storeId} does not have a WhatsApp number.`);
       }
 
       // Queue notification for admin group
@@ -325,13 +326,8 @@ export const sendDailySalesSummary = onSchedule({
         logger.error("Error in scheduled function sendDailySalesSummary:", error);
     }
 });
+  
+  
+  
 
-// Note: I have removed the 'onTopUpRequestUpdate' and 'syncTopUpRequestToStore' functions 
-// because their logic has been consolidated into 'onTopUpRequestCreate' and the new 'onTopUpRequestUpdate'
-// to handle notifications correctly.
-// The old 'onTopUpRequestUpdate' was also using a 'completed' status which is now 'disetujui'.
-// This new structure is cleaner and more aligned with the app's logic.
-
-  
-  
-  
+    
