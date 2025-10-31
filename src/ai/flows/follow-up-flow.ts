@@ -17,25 +17,45 @@ const followUpPrompt = ai.definePrompt({
   input: { schema: GenerateFollowUpMessageInputSchema },
   output: { schema: GenerateFollowUpMessageOutputSchema },
   prompt: `
-    Anda adalah seorang Business Development Specialist yang ramah dan sangat persuasif untuk Chika POS.
-    Tugas Anda adalah membuat draf pesan WhatsApp untuk admin toko bernama '{{{storeName}}}'.
+    Anda adalah seorang Growth Specialist dari Chika POS yang sangat ahli dalam komunikasi persuasif.
+    Tugas Anda adalah membuat draf pesan WhatsApp yang personal dan memotivasi untuk admin toko bernama '{{{storeName}}}'.
 
-    Tujuan pesan ini adalah untuk mendorong mereka menjelajahi fitur-fitur unggulan Chika POS yang mungkin belum mereka manfaatkan sepenuhnya.
+    Konteks: Toko ini adalah tipe '{{{storeType}}}'.
+    - Jika tipe toko adalah 'F&B', link aplikasi yang relevan adalah https://fnb.era5758.co.id
+    - Jika tipe toko adalah 'Retail', link aplikasi yang relevan adalah https://pos.era5758.co.id
 
-    Gunakan format WhatsApp (misal: *teks tebal* untuk penekanan) dan berikan spasi antar paragraf agar mudah dibaca.
+    Tujuan utama pesan ini adalah untuk mengapresiasi mereka dan menginspirasi mereka untuk memaksimalkan potensi bisnisnya dengan dua fitur unggulan Chika POS.
 
-    Struktur pesan:
-    1.  Sapaan ramah: "Halo tim *{{{storeName}}}*!"
-    2.  Paragraf pengantar singkat yang menarik.
-    3.  Poin pertama tentang *Katalog Publik* dengan penawaran spesial. Jelaskan dengan sangat menarik bahwa ini adalah kesempatan emas untuk punya website toko online sendiri.
-        - Sebutkan ada *promo spesial: GRATIS akses Katalog Publik selama 1 bulan penuh!*
-        - Jelaskan ini sebagai 'etalase digital profesional' mereka, yang bisa diakses lewat link unik (contoh: chika.bio/namatoko).
-        - Detailkan manfaatnya: upload produk dengan foto dan deskripsi menarik, jangkau pelanggan online lebih luas, dan terlihat lebih kredibel tanpa perlu pusing coding sama sekali.
-    4.  Poin kedua tentang *Asisten AI*. Sebutkan bahwa ada asisten AI personal yang siap membantu 24/7 untuk menjawab pertanyaan seputar bisnis, memberikan ide-ide marketing, atau bahkan membuat deskripsi produk yang menjual.
-    5.  Paragraf penutup dengan ajakan kuat untuk mencoba promo dan fitur yang ada, serta ucapan terima kasih.
+    Gunakan format WhatsApp standar (misal: *teks tebal* untuk penekanan, dan berikan spasi antar paragraf agar enak dibaca).
 
-    Buat pesan dengan gaya bahasa yang santai, bersahabat, penuh semangat, namun tetap profesional.
-    Pastikan output hanya berisi teks pesan yang akan dikirim.
+    Struktur dan Nada Pesan:
+    1.  **Sapaan Personal & Apresiasi**: Mulai dengan sapaan hangat, sebut nama tokonya. Tunjukkan apresiasi bahwa mereka telah menjadi bagian dari keluarga Chika POS.
+        Contoh: "Selamat siang tim *{{{storeName}}}*! Kami harap operasional bisnis Anda berjalan lancar bersama Chika POS."
+
+    2.  **Transisi ke Peluang Pertumbuhan**: Buat transisi yang mulus dari apresiasi ke peluang untuk berkembang.
+        Contoh: "Kami melihat potensi besar pada bisnis Anda dan kami ingin membantu Anda melesat lebih jauh lagi."
+
+    3.  **Poin 1: Katalog Publik (Sebagai Website Profesional)**
+        - Perkenalkan fitur ini bukan sebagai 'Katalog Publik', tapi sebagai *Website Toko Online Profesional Anda sendiri*.
+        - Jelaskan ini sebagai kesempatan emas untuk memiliki kehadiran digital yang kuat tanpa biaya dan tanpa pusing koding.
+        - **Highlight Promo**: Tawarkan *GRATIS akses Website Toko Online Profesional selama 1 bulan penuh!*
+        - **Detailkan Manfaatnya**:
+          - Punya link bio yang keren dan bisa dibagikan (contoh: chika.bio/{{{storeName}}}).
+          - Tampilkan semua produk dengan foto, deskripsi, dan harga yang menarik.
+          - Jangkau pelanggan di mana saja, kapan saja.
+          - Bangun citra brand yang lebih terpercaya dan modern.
+
+    4.  **Poin 2: Asisten AI Cerdas 24/7**
+        - Perkenalkan fitur ini sebagai *Asisten Bisnis AI Pribadi* yang selalu siaga.
+        - Jelaskan bahwa asisten ini bisa membantu menjawab pertanyaan strategis, memberikan ide-ide marketing cemerlang (contoh: "ide promo untuk meningkatkan penjualan kopi susu"), hingga membuat deskripsi produk yang 'menjual' secara otomatis.
+        - Tekankan bahwa ini seperti memiliki konsultan bisnis di dalam genggaman, 24/7.
+
+    5.  **Penutup yang Mengajak & Informatif**:
+        - Ajak mereka untuk langsung mencoba promo dan fitur yang ada.
+        - Sertakan link aplikasi yang sesuai dengan tipe toko mereka untuk login.
+        - Ucapkan terima kasih dan tawarkan bantuan jika ada pertanyaan.
+
+    Pastikan output HANYA berisi teks pesan WhatsApp yang akan dikirim, dengan gaya bahasa yang membangkitkan semangat, bersahabat, dan profesional.
   `,
 });
 
@@ -47,6 +67,9 @@ const generateFollowUpFlow = ai.defineFlow(
     outputSchema: GenerateFollowUpMessageOutputSchema,
   },
   async (input) => {
+    // Sanitize storeName for URL
+    const sanitizedStoreName = input.storeName.replace(/\s+/g, '').toLowerCase();
+    const modelInput = { ...input, storeName: sanitizedStoreName };
     const { output } = await followUpPrompt(input);
     return output!;
   }

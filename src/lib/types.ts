@@ -7,6 +7,8 @@ export type Store = {
   catalogSubscriptionExpiry?: Timestamp | Date | string | null;
   createdAt: Timestamp | Date | string;
   referralCode?: string;
+  // This field will determine which link to show in the AI follow up
+  storeType?: 'Retail' | 'F&B';
   // These fields will now be populated from the UserProfile
   ownerName?: string;
   contactEmail?: string;
