@@ -35,7 +35,7 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useFirestore, useUser } from "@/firebase";
-import { doc, increment, Timestamp, addDoc, collection } from "firebase/firestore";
+import { doc, increment, Timestamp, addDoc, collection, getDoc } from "firebase/firestore";
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { cn } from "@/lib/utils";
 import { generateFollowUpMessage } from "@/ai/flows/follow-up-flow";
@@ -123,7 +123,8 @@ export function StoresTable({ stores }: { stores: Store[] }) {
         
         try {
             const adminUid = selectedStore.adminUids[0];
-            const userDoc = await doc(firestore, 'users', adminUid).get();
+            const userDocRef = doc(firestore, 'users', adminUid);
+            const userDoc = await getDoc(userDocRef);
             
             if (!userDoc.exists() || !userDoc.data()?.whatsapp) {
                  toast({ variant: 'destructive', title: 'Nomor Tidak Ditemukan', description: `Admin untuk toko ${selectedStore.name} tidak memiliki nomor WhatsApp.` });
