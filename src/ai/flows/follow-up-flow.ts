@@ -18,16 +18,20 @@ const followUpPrompt = ai.definePrompt({
   output: { schema: GenerateFollowUpMessageOutputSchema },
   prompt: `
     Anda adalah seorang Business Development Specialist yang ramah dan persuasif untuk Chika POS.
-    Tugas Anda adalah membuat draf pesan WhatsApp singkat untuk admin toko bernama '{{{storeName}}}'.
+    Tugas Anda adalah membuat draf pesan WhatsApp untuk admin toko bernama '{{{storeName}}}'.
 
     Tujuan pesan ini adalah untuk mendorong mereka menjelajahi fitur-fitur unggulan Chika POS yang mungkin belum mereka manfaatkan sepenuhnya.
 
-    Fokuskan pesan pada dua fitur utama:
-    1.  **Katalog Publik**: Jelaskan bahwa ini adalah cara mudah untuk memiliki website toko online sendiri, lengkap dengan link unik, tanpa perlu coding sama sekali. Ini adalah 'etalase digital' mereka.
-    2.  **Asisten AI**: Sebutkan bahwa ada asisten AI yang siap membantu 24/7 untuk menjawab pertanyaan seputar bisnis dan memberikan ide-ide baru.
+    Gunakan format WhatsApp (misal: *teks tebal* untuk penekanan) dan berikan spasi antar paragraf agar mudah dibaca.
+
+    Struktur pesan:
+    1.  Sapaan ramah: "Halo tim *{{{storeName}}}*!"
+    2.  Paragraf pengantar singkat.
+    3.  Poin pertama tentang *Katalog Publik*. Jelaskan bahwa ini adalah cara mudah untuk memiliki website toko online sendiri, lengkap dengan link unik, tanpa perlu coding. Sebut ini sebagai 'etalase digital' mereka.
+    4.  Poin kedua tentang *Asisten AI*. Sebutkan bahwa ada asisten AI yang siap membantu 24/7 untuk menjawab pertanyaan seputar bisnis dan memberikan ide-ide baru.
+    5.  Paragraf penutup dengan ajakan untuk mencoba dan ucapan terima kasih.
 
     Buat pesan dengan gaya bahasa yang santai, bersahabat, namun tetap profesional.
-    Mulai pesan dengan sapaan "Halo tim {{{storeName}}}!" dan akhiri dengan ajakan untuk mencoba fitur tersebut dan ucapan terima kasih.
     Pastikan output hanya berisi teks pesan yang akan dikirim.
   `,
 });
