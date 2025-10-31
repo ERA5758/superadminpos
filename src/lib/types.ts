@@ -36,6 +36,7 @@ export type TopUpRequest = {
   approvalDate?: Timestamp | Date | string;
   approvedBy?: string;
   proofUrl?: string;
+  userId?: string; // Add userId to know who requested it
 };
 
 export type Transaction = {
@@ -63,6 +64,3 @@ export type ReferralCode = {
   isActive: boolean;
   createdAt: Timestamp | Date | string;
 };
-
-    
-    

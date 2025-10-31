@@ -1,5 +1,5 @@
 
-"use client";
+'use client';
 
 import type { TopUpRequest } from "@/lib/types";
 import {
@@ -17,8 +17,8 @@ import { Button } from "@/components/ui/button";
 import { CheckCircle2, XCircle, Link as LinkIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { useFirestore } from "@/firebase";
-import { doc, increment, writeBatch, Timestamp, collection } from "firebase/firestore";
+import { useFirestore, useUser } from "@/firebase";
+import { doc, increment, writeBatch, Timestamp, collection, getDoc } from "firebase/firestore";
 import { format } from 'date-fns';
 import { id } from 'date-fns/locale';
 import Link from 'next/link';
@@ -26,6 +26,33 @@ import Link from 'next/link';
 export function TopUpRequestsTable({ requests }: { requests: TopUpRequest[] }) {
     const { toast } = useToast();
     const firestore = useFirestore();
+    const { user: adminUser } = useUser();
+
+    // This function will now be responsible for calling our new API route
+    const triggerNotification = async (request: TopUpRequest, newStatus: 'disetujui' | 'ditolak') => {
+        try {
+            await fetch('/api/handle-top-up-decision', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    requestId: request.id,
+                    storeId: request.storeId,
+                    storeName: request.storeName,
+                    userId: request.userId,
+                    tokensToAdd: request.tokensToAdd,
+                    newStatus: newStatus,
+                }),
+            });
+            // We don't need to await a response, just fire and forget.
+            // The API route will handle logging any errors.
+        } catch (error) {
+            console.error("Failed to trigger notification API:", error);
+            // Optionally notify admin that notification might have failed,
+            // but the primary action (approval/rejection) was successful.
+        }
+    };
 
     const handleAction = async (request: TopUpRequest, action: 'disetujui' | 'ditolak') => {
         if (!firestore) {
@@ -39,23 +66,20 @@ export function TopUpRequestsTable({ requests }: { requests: TopUpRequest[] }) {
 
         const batch = writeBatch(firestore);
 
-        // Path to the top-up request document in the root collection
         const requestRef = doc(firestore, "topUpRequests", request.id);
         
         const updateData = { 
             status: action,
             approvalDate: Timestamp.now(),
-            // approvedBy: currentAdminUid // TODO: Add current admin UID
+            approvedBy: adminUser?.uid || 'unknown_admin'
         };
 
         batch.update(requestRef, updateData);
 
-        // If approved, update the store's token balance and create a transaction log
         if (action === 'disetujui') {
             const storeRef = doc(firestore, "stores", request.storeId);
             batch.update(storeRef, { pradanaTokenBalance: increment(request.tokensToAdd) });
             
-            // Create a new transaction log for the top-up
             const transactionRef = doc(collection(firestore, "transactions"));
             batch.set(transactionRef, {
               storeId: request.storeId,
@@ -70,15 +94,18 @@ export function TopUpRequestsTable({ requests }: { requests: TopUpRequest[] }) {
             await batch.commit();
             toast({
                 title: `Permintaan ${action === 'disetujui' ? 'Disetujui' : 'Ditolak'}`,
-                description: `Permintaan isi ulang untuk ${request.storeName} telah ${action}.`,
+                description: `Permintaan isi ulang untuk ${request.storeName} telah ${action}. Notifikasi sedang dikirim.`,
             });
+            
+            // After successful DB update, trigger the notification API
+            triggerNotification(request, action);
+
         } catch (error: any) {
              toast({
                 variant: 'destructive',
                 title: "Gagal Memperbarui",
                 description: `Gagal memperbarui status permintaan: ${error.message}`,
             });
-            // Note: We are not using the global error emitter here for batch writes
             console.error("Batch write failed:", error);
         }
 
@@ -177,5 +204,3 @@ export function TopUpRequestsTable({ requests }: { requests: TopUpRequest[] }) {
     </Card>
   );
 }
-
-    
