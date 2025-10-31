@@ -15,35 +15,10 @@ function getFirebaseAdminApp(): App {
 
 // --- Start of Inlined WhatsApp Logic ---
 
-type WhatsappSettings = {
-    deviceId: string;
-    adminGroup: string;
-};
+// Hardcoded settings for reliability
+const WHATSAPP_DEVICE_ID = 'fa254b2588ad7626d647da23be4d6a08';
+const WHATSAPP_ADMIN_GROUP = 'SPV ERA MMBP';
 
-// Default settings in case the document in Firestore is missing
-const defaultWhatsappSettings: WhatsappSettings = {
-    deviceId: '',
-    adminGroup: '',
-};
-
-async function getWhatsappSettingsForApi(): Promise<WhatsappSettings> {
-    const adminApp = getFirebaseAdminApp();
-    const adminDb = getFirestore(adminApp);
-    const settingsDocRef = adminDb.collection('appSettings').doc('whatsappConfig');
-    try {
-        const docSnap = await settingsDocRef.get();
-        if (docSnap.exists()) {
-            // Merge fetched data with defaults to ensure all keys are present
-            return { ...defaultWhatsappSettings, ...(docSnap.data() as Partial<WhatsappSettings>) };
-        } else {
-            console.warn("WhatsApp settings document not found. Using defaults.");
-            return defaultWhatsappSettings;
-        }
-    } catch (error) {
-        console.error("API Route: Error fetching WhatsApp settings:", error);
-        return defaultWhatsappSettings; // Return defaults on error
-    }
-}
 
 async function internalSendWhatsapp(deviceId: string, target: string, message: string, isGroup: boolean = false) {
     if (!deviceId || !target || !message) {
@@ -109,9 +84,11 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Missing required notification data.' }, { status: 400 });
         }
 
-        const { deviceId, adminGroup } = await getWhatsappSettingsForApi();
+        const deviceId = WHATSAPP_DEVICE_ID;
+        const adminGroup = WHATSAPP_ADMIN_GROUP;
+
         if (!deviceId) {
-            console.warn("WhatsApp deviceId not configured. Skipping notifications.");
+            console.warn("WhatsApp deviceId is not hardcoded. Skipping notifications.");
             return NextResponse.json({ success: true, message: "Action completed, but WhatsApp notifications skipped due to missing configuration." });
         }
         
