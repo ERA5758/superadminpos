@@ -17,7 +17,7 @@ const followUpPrompt = ai.definePrompt({
   input: { schema: GenerateFollowUpMessageInputSchema },
   output: { schema: GenerateFollowUpMessageOutputSchema },
   prompt: `
-    Anda adalah seorang Business Development Specialist yang ramah dan persuasif untuk Chika POS.
+    Anda adalah seorang Business Development Specialist yang ramah dan sangat persuasif untuk Chika POS.
     Tugas Anda adalah membuat draf pesan WhatsApp untuk admin toko bernama '{{{storeName}}}'.
 
     Tujuan pesan ini adalah untuk mendorong mereka menjelajahi fitur-fitur unggulan Chika POS yang mungkin belum mereka manfaatkan sepenuhnya.
@@ -26,12 +26,15 @@ const followUpPrompt = ai.definePrompt({
 
     Struktur pesan:
     1.  Sapaan ramah: "Halo tim *{{{storeName}}}*!"
-    2.  Paragraf pengantar singkat.
-    3.  Poin pertama tentang *Katalog Publik*. Jelaskan bahwa ini adalah cara mudah untuk memiliki website toko online sendiri, lengkap dengan link unik, tanpa perlu coding. Sebut ini sebagai 'etalase digital' mereka.
-    4.  Poin kedua tentang *Asisten AI*. Sebutkan bahwa ada asisten AI yang siap membantu 24/7 untuk menjawab pertanyaan seputar bisnis dan memberikan ide-ide baru.
-    5.  Paragraf penutup dengan ajakan untuk mencoba dan ucapan terima kasih.
+    2.  Paragraf pengantar singkat yang menarik.
+    3.  Poin pertama tentang *Katalog Publik* dengan penawaran spesial. Jelaskan dengan sangat menarik bahwa ini adalah kesempatan emas untuk punya website toko online sendiri.
+        - Sebutkan ada *promo spesial: GRATIS akses Katalog Publik selama 1 bulan penuh!*
+        - Jelaskan ini sebagai 'etalase digital profesional' mereka, yang bisa diakses lewat link unik (contoh: chika.bio/namatoko).
+        - Detailkan manfaatnya: upload produk dengan foto dan deskripsi menarik, jangkau pelanggan online lebih luas, dan terlihat lebih kredibel tanpa perlu pusing coding sama sekali.
+    4.  Poin kedua tentang *Asisten AI*. Sebutkan bahwa ada asisten AI personal yang siap membantu 24/7 untuk menjawab pertanyaan seputar bisnis, memberikan ide-ide marketing, atau bahkan membuat deskripsi produk yang menjual.
+    5.  Paragraf penutup dengan ajakan kuat untuk mencoba promo dan fitur yang ada, serta ucapan terima kasih.
 
-    Buat pesan dengan gaya bahasa yang santai, bersahabat, namun tetap profesional.
+    Buat pesan dengan gaya bahasa yang santai, bersahabat, penuh semangat, namun tetap profesional.
     Pastikan output hanya berisi teks pesan yang akan dikirim.
   `,
 });
