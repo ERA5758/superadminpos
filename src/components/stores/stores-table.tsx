@@ -1,5 +1,5 @@
 
-"use client";
+'use client';
 
 import { useState } from "react";
 import type { Store } from "@/lib/types";
@@ -14,12 +14,13 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Pencil } from "lucide-react";
+import { MoreHorizontal, Pencil, BotMessageSquare, Send } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -33,18 +34,26 @@ import {
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { useFirestore } from "@/firebase";
-import { doc, increment, Timestamp } from "firebase/firestore";
+import { useFirestore, useUser } from "@/firebase";
+import { doc, increment, Timestamp, addDoc, collection } from "firebase/firestore";
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { cn } from "@/lib/utils";
+import { generateFollowUpMessage, GenerateFollowUpMessageInput } from "@/ai/flows/follow-up-flow";
+import { Textarea } from "../ui/textarea";
+import { Skeleton } from "../ui/skeleton";
 
 export function StoresTable({ stores }: { stores: Store[] }) {
     const firestore = useFirestore();
+    const { user } = useUser();
     const { toast } = useToast();
 
     const [balanceDialog, setBalanceDialog] = useState(false);
+    const [aiFollowUpDialog, setAiFollowUpDialog] = useState(false);
     const [selectedStore, setSelectedStore] = useState<Store | null>(null);
     const [adjustmentAmount, setAdjustmentAmount] = useState(0);
+    const [aiMessage, setAiMessage] = useState('');
+    const [isAiLoading, setIsAiLoading] = useState(false);
+
 
     const handleActionClick = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -54,6 +63,28 @@ export function StoresTable({ stores }: { stores: Store[] }) {
         setSelectedStore(store);
         setAdjustmentAmount(0);
         setBalanceDialog(true);
+    }
+
+    const handleOpenAiFollowUpDialog = async (store: Store) => {
+        setSelectedStore(store);
+        setAiFollowUpDialog(true);
+        setIsAiLoading(true);
+        setAiMessage('');
+
+        try {
+            const result = await generateFollowUpMessage({ storeName: store.name });
+            setAiMessage(result.message);
+        } catch (error) {
+            console.error("Error generating AI message:", error);
+            toast({
+                variant: 'destructive',
+                title: 'Gagal Membuat Pesan',
+                description: 'Terjadi kesalahan saat berkomunikasi dengan AI.'
+            });
+            setAiFollowUpDialog(false);
+        } finally {
+            setIsAiLoading(false);
+        }
     }
 
     const handleAdjustBalance = () => {
@@ -74,6 +105,51 @@ export function StoresTable({ stores }: { stores: Store[] }) {
 
         setBalanceDialog(false);
         setSelectedStore(null);
+    }
+
+    const handleSendFollowUp = async () => {
+        if (!firestore || !selectedStore || !aiMessage) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Data tidak lengkap untuk mengirim pesan.' });
+            return;
+        }
+
+        // We need the admin's whatsapp number. Let's assume the first admin is the target.
+        // A more robust solution would be to select which admin to message if there are multiple.
+        if (!selectedStore.adminUids || selectedStore.adminUids.length === 0) {
+            toast({ variant: 'destructive', title: 'Tidak Ada Admin', description: `Toko ${selectedStore.name} tidak memiliki admin terdaftar.` });
+            return;
+        }
+        
+        try {
+            const adminUid = selectedStore.adminUids[0];
+            const userDoc = await doc(firestore, 'users', adminUid).get();
+            
+            if (!userDoc.exists() || !userDoc.data()?.whatsapp) {
+                 toast({ variant: 'destructive', title: 'Nomor Tidak Ditemukan', description: `Admin untuk toko ${selectedStore.name} tidak memiliki nomor WhatsApp.` });
+                 return;
+            }
+
+            const whatsappNumber = userDoc.data()?.whatsapp;
+            
+            await addDoc(collection(firestore, "whatsappQueue"), {
+                to: whatsappNumber,
+                message: aiMessage,
+                isGroup: false,
+                storeId: 'platform', // Use platform settings for this kind of outreach
+                createdAt: Timestamp.now(),
+            });
+
+            toast({
+                title: 'Pesan Terkirim ke Antrean',
+                description: `Pesan follow-up untuk ${selectedStore.name} akan segera dikirim.`
+            });
+
+            setAiFollowUpDialog(false);
+            
+        } catch (error: any) {
+            console.error("Error queueing whatsapp message:", error);
+            toast({ variant: 'destructive', title: 'Gagal Mengirim', description: error.message });
+        }
     }
     
     const isStorePremium = (store: Store): boolean => {
@@ -133,6 +209,11 @@ export function StoresTable({ stores }: { stores: Store[] }) {
                                 <Pencil className="mr-2 h-4 w-4" />
                                 Sesuaikan Saldo Token
                             </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                             <DropdownMenuItem onClick={() => handleOpenAiFollowUpDialog(store)}>
+                                <BotMessageSquare className="mr-2 h-4 w-4" />
+                                Generate Follow-up AI
+                            </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </TableCell>
@@ -143,6 +224,7 @@ export function StoresTable({ stores }: { stores: Store[] }) {
       </CardContent>
     </Card>
 
+    {/* Balance Adjustment Dialog */}
     <Dialog open={balanceDialog} onOpenChange={setBalanceDialog}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -185,6 +267,44 @@ export function StoresTable({ stores }: { stores: Store[] }) {
         </DialogContent>
     </Dialog>
     
+    {/* AI Follow-up Dialog */}
+    <Dialog open={aiFollowUpDialog} onOpenChange={setAiFollowUpDialog}>
+        <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+                <DialogTitle className="font-headline flex items-center gap-2"><BotMessageSquare /> Draf Pesan Follow-up</DialogTitle>
+                <DialogDescription>
+                    AI telah membuatkan draf pesan untuk mendorong admin toko {selectedStore?.name} menjelajahi fitur Chika POS. Anda bisa mengeditnya sebelum mengirim.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="py-4 space-y-4">
+                {isAiLoading ? (
+                    <div className="space-y-2">
+                        <Skeleton className="h-4 w-1/4" />
+                        <Skeleton className="h-20 w-full" />
+                    </div>
+                ) : (
+                    <div className="space-y-2">
+                        <Label htmlFor="ai-message">Draf Pesan WhatsApp</Label>
+                        <Textarea 
+                            id="ai-message"
+                            value={aiMessage}
+                            onChange={(e) => setAiMessage(e.target.value)}
+                            rows={10}
+                            className="text-sm"
+                        />
+                    </div>
+                )}
+            </div>
+            <DialogFooter>
+                <Button variant="secondary" onClick={() => setAiFollowUpDialog(false)} disabled={isAiLoading}>Batal</Button>
+                <Button onClick={handleSendFollowUp} disabled={isAiLoading || !aiMessage}>
+                    <Send className="mr-2 h-4 w-4" />
+                    Kirim via WhatsApp
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
+
     </>
   );
 
