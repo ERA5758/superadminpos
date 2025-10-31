@@ -35,7 +35,7 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useFirestore, useUser } from "@/firebase";
-import { doc, increment, Timestamp, addDoc, collection, getDoc } from "firebase/firestore";
+import { doc, increment, Timestamp, getDoc } from "firebase/firestore";
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { cn } from "@/lib/utils";
 import { generateFollowUpMessage } from "@/ai/flows/follow-up-flow";
@@ -114,8 +114,6 @@ export function StoresTable({ stores }: { stores: Store[] }) {
             return;
         }
 
-        // We need the admin's whatsapp number. Let's assume the first admin is the target.
-        // A more robust solution would be to select which admin to message if there are multiple.
         if (!selectedStore.adminUids || selectedStore.adminUids.length === 0) {
             toast({ variant: 'destructive', title: 'Tidak Ada Admin', description: `Toko ${selectedStore.name} tidak memiliki admin terdaftar.` });
             return;
@@ -133,23 +131,30 @@ export function StoresTable({ stores }: { stores: Store[] }) {
 
             const whatsappNumber = userDoc.data()?.whatsapp;
             
-            await addDoc(collection(firestore, "whatsappQueue"), {
-                to: whatsappNumber,
-                message: aiMessage,
-                isGroup: false,
-                storeId: 'platform', // Use platform settings for this kind of outreach
-                createdAt: Timestamp.now(),
+            // Call the new API route instead of writing to whatsappQueue
+            const response = await fetch('/api/send-follow-up', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    to: whatsappNumber,
+                    message: aiMessage
+                })
             });
 
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Gagal mengirim pesan via API.');
+            }
+
             toast({
-                title: 'Pesan Terkirim ke Antrean',
-                description: `Pesan follow-up untuk ${selectedStore.name} akan segera dikirim.`
+                title: 'Pesan Terkirim',
+                description: `Pesan follow-up untuk ${selectedStore.name} telah berhasil dikirim.`
             });
 
             setAiFollowUpDialog(false);
             
         } catch (error: any) {
-            console.error("Error queueing whatsapp message:", error);
+            console.error("Error sending follow-up message:", error);
             toast({ variant: 'destructive', title: 'Gagal Mengirim', description: error.message });
         }
     }
