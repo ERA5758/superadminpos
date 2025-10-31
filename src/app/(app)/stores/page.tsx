@@ -40,35 +40,35 @@ export default function StoresPage() {
       return;
     }
 
-    if (!showInactive || !transactions) {
+    if (showInactive && transactions) {
+        const oneWeekAgo = subDays(new Date(), 7);
+
+        // Create a map of the last transaction date for each store
+        const lastTransactionMap = new Map<string, Date>();
+        transactions.forEach(tx => {
+            if (tx.type !== 'pos' || !tx.createdAt) return;
+
+            const txDate = tx.createdAt instanceof Timestamp ? tx.createdAt.toDate() : new Date(tx.createdAt as string);
+            const currentLastDate = lastTransactionMap.get(tx.storeId);
+            
+            if (!currentLastDate || txDate > currentLastDate) {
+                lastTransactionMap.set(tx.storeId, txDate);
+            }
+        });
+
+        // Filter stores based on the last transaction date
+        const inactiveStores = stores.filter(store => {
+            const lastTxDate = lastTransactionMap.get(store.id);
+            // A store is inactive if it has no transactions at all,
+            // or its last transaction was more than a week ago.
+            return !lastTxDate || lastTxDate < oneWeekAgo;
+        });
+
+        setFilteredStores(inactiveStores);
+    } else {
+      // If the filter is off, or transactions haven't loaded yet, show all stores.
       setFilteredStores(stores);
-      return;
     }
-    
-    const oneWeekAgo = subDays(new Date(), 7);
-
-    // Create a map of the last transaction date for each store
-    const lastTransactionMap = new Map<string, Date>();
-    transactions.forEach(tx => {
-      if (tx.type !== 'pos' || !tx.createdAt) return;
-
-      const txDate = tx.createdAt instanceof Timestamp ? tx.createdAt.toDate() : new Date(tx.createdAt);
-      const currentLastDate = lastTransactionMap.get(tx.storeId);
-      
-      if (!currentLastDate || txDate > currentLastDate) {
-        lastTransactionMap.set(tx.storeId, txDate);
-      }
-    });
-
-    // Filter stores based on the last transaction date
-    const inactiveStores = stores.filter(store => {
-      const lastTxDate = lastTransactionMap.get(store.id);
-      // A store is inactive if it has no transactions at all,
-      // or its last transaction was more than a week ago.
-      return !lastTxDate || lastTxDate < oneWeekAgo;
-    });
-
-    setFilteredStores(inactiveStores);
 
   }, [stores, transactions, showInactive]);
 
@@ -105,4 +105,3 @@ export default function StoresPage() {
     </div>
   );
 }
-
