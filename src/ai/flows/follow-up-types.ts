@@ -7,7 +7,7 @@ import { z } from 'genkit';
 
 export const GenerateFollowUpMessageInputSchema = z.object({
   storeName: z.string().describe('The name of the store to generate the message for.'),
-  storeType: z.enum(['Retail', 'F&B']).describe('The type of the store.'),
+  storeDescription: z.string().describe('A brief description of the store to provide context for personalization.'),
 });
 export type GenerateFollowUpMessageInput = z.infer<typeof GenerateFollowUpMessageInputSchema>;
 

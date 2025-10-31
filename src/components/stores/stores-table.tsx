@@ -73,9 +73,10 @@ export function StoresTable({ stores }: { stores: Store[] }) {
         setAiMessage('');
 
         try {
-            // Default to 'F&B' if storeType is not set, as it's a common default.
-            const storeType = store.storeType || 'F&B';
-            const result = await generateFollowUpMessage({ storeName: store.name, storeType });
+            const result = await generateFollowUpMessage({ 
+              storeName: store.name, 
+              storeDescription: store.description || 'Toko umum' 
+            });
             setAiMessage(result.message);
         } catch (error) {
             console.error("Error generating AI message:", error);
