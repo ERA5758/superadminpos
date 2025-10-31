@@ -38,7 +38,8 @@ import { useFirestore, useUser } from "@/firebase";
 import { doc, increment, Timestamp, addDoc, collection } from "firebase/firestore";
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { cn } from "@/lib/utils";
-import { generateFollowUpMessage, GenerateFollowUpMessageInput } from "@/ai/flows/follow-up-flow";
+import { generateFollowUpMessage } from "@/ai/flows/follow-up-flow";
+import type { GenerateFollowUpMessageInput } from "@/ai/flows/follow-up-types";
 import { Textarea } from "../ui/textarea";
 import { Skeleton } from "../ui/skeleton";
 

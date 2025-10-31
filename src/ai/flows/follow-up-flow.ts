@@ -5,28 +5,17 @@
  * @fileoverview AI flow for generating personalized follow-up messages for store admins.
  *
  * - generateFollowUpMessage: Generates a persuasive message to encourage feature exploration.
- * - GenerateFollowUpMessageInput: Input schema for the flow.
- * - GenerateFollowUpMessageOutput: Output schema for the flow.
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
+import { GenerateFollowUpMessageInput, GenerateFollowUpMessageOutput, GenerateFollowUpMessageInputSchema, GenerateFollowUpMessageOutputSchema } from './follow-up-types';
 
-export const GenerateFollowUpMessageInput = z.object({
-  storeName: z.string().describe('The name of the store to generate the message for.'),
-});
-export type GenerateFollowUpMessageInput = z.infer<typeof GenerateFollowUpMessageInput>;
-
-export const GenerateFollowUpMessageOutput = z.object({
-  message: z.string().describe('The generated WhatsApp message content.'),
-});
-export type GenerateFollowUpMessageOutput = z.infer<typeof GenerateFollowUpMessageOutput>;
 
 // Define the prompt for the AI
 const followUpPrompt = ai.definePrompt({
   name: 'followUpMessagePrompt',
-  input: { schema: GenerateFollowUpMessageInput },
-  output: { schema: GenerateFollowUpMessageOutput },
+  input: { schema: GenerateFollowUpMessageInputSchema },
+  output: { schema: GenerateFollowUpMessageOutputSchema },
   prompt: `
     Anda adalah seorang Business Development Specialist yang ramah dan persuasif untuk Chika POS.
     Tugas Anda adalah membuat draf pesan WhatsApp singkat untuk admin toko bernama '{{{storeName}}}'.
@@ -47,8 +36,8 @@ const followUpPrompt = ai.definePrompt({
 const generateFollowUpFlow = ai.defineFlow(
   {
     name: 'generateFollowUpFlow',
-    inputSchema: GenerateFollowUpMessageInput,
-    outputSchema: GenerateFollowUpMessageOutput,
+    inputSchema: GenerateFollowUpMessageInputSchema,
+    outputSchema: GenerateFollowUpMessageOutputSchema,
   },
   async (input) => {
     const { output } = await followUpPrompt(input);
